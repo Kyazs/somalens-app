@@ -1,0 +1,209 @@
+{
+  "version": "v2.2n",
+  "timestamp": "20260110_191239",
+  "proxy_measurements": [
+    "Stature",
+    "Weight",
+    "Chest_Circumference",
+    "Hip_Circumference",
+    "Waist_Circumference",
+    "Thigh_Circumference",
+    "Ankle_Circumference",
+    "Shoulder_Breadth",
+    "Knee_Height",
+    "Arm_Circumference_Flexed",
+    "Calf_Circumference",
+    "BMI",
+    "Age",
+    "Gender_Male"
+  ],
+  "target_measurements": [
+    "Triceps_Skinfold",
+    "Subscapular_Skinfold",
+    "Supraspinale_Skinfold",
+    "Calf_Skinfold",
+    "Humerus_Breadth",
+    "Femur_Breadth",
+    "Arm_Circumference_Flexed",
+    "Calf_Circumference"
+  ],
+  "training_stats": {
+    "Triceps_Skinfold": {
+      "feature_importance": {
+        "Stature": 0.05570383697771604,
+        "Weight": 0.062021036342425936,
+        "Chest_Circumference": 0.05372042200228899,
+        "Hip_Circumference": 0.15762136064080992,
+        "Waist_Circumference": 0.048730842740709164,
+        "Thigh_Circumference": 0.12893040733892733,
+        "Ankle_Circumference": 0.041238241346636124,
+        "Shoulder_Breadth": 0.04488319278693808,
+        "Knee_Height": 0.04158392050217057,
+        "Arm_Circumference_Flexed": 0.020408245347144284,
+        "Calf_Circumference": 0.021046719536916905,
+        "BMI": 0.11655597190514484,
+        "Age": 0.019512224335541777,
+        "Gender_Male": 0.18804357819663006
+      },
+      "n_samples": 1910
+    },
+    "Subscapular_Skinfold": {
+      "feature_importance": {
+        "Stature": 0.036702633595249945,
+        "Weight": 0.06695876168747741,
+        "Chest_Circumference": 0.16564118977030498,
+        "Hip_Circumference": 0.11745203482573394,
+        "Waist_Circumference": 0.11227152937366809,
+        "Thigh_Circumference": 0.08812592187538239,
+        "Ankle_Circumference": 0.02578003069491566,
+        "Shoulder_Breadth": 0.03195405650860417,
+        "Knee_Height": 0.02914781022139356,
+        "Arm_Circumference_Flexed": 0.01667095552651153,
+        "Calf_Circumference": 0.02152944369673741,
+        "BMI": 0.25019639148725126,
+        "Age": 0.01993351759733193,
+        "Gender_Male": 0.01763572313943762
+      },
+      "n_samples": 1910
+    },
+    "Supraspinale_Skinfold": {
+      "feature_importance": {
+        "Stature": 0.0475091573056408,
+        "Weight": 0.0583082893614584,
+        "Chest_Circumference": 0.11744155607212282,
+        "Hip_Circumference": 0.14553258548849943,
+        "Waist_Circumference": 0.08502859371600278,
+        "Thigh_Circumference": 0.10308640364891905,
+        "Ankle_Circumference": 0.029948942550037695,
+        "Shoulder_Breadth": 0.0343167968245098,
+        "Knee_Height": 0.036738599374121494,
+        "Arm_Circumference_Flexed": 0.01723385318893635,
+        "Calf_Circumference": 0.019183007773266397,
+        "BMI": 0.22417518898263938,
+        "Age": 0.0227334987822204,
+        "Gender_Male": 0.05876352693162513
+      },
+      "n_samples": 1910
+    },
+    "Calf_Skinfold": {
+      "feature_importance": {
+        "Stature": 0.03719269747227938,
+        "Weight": 0.0569140792966822,
+        "Chest_Circumference": 0.10175924302549824,
+        "Hip_Circumference": 0.18369493978449689,
+        "Waist_Circumference": 0.07166091429091519,
+        "Thigh_Circumference": 0.13401886942972147,
+        "Ankle_Circumference": 0.0176163633949053,
+        "Shoulder_Breadth": 0.028453945241783192,
+        "Knee_Height": 0.02185717964826345,
+        "Arm_Circumference_Flexed": 0.007952022196472043,
+        "Calf_Circumference": 0.010896223156684176,
+        "BMI": 0.2519258505920459,
+        "Age": 0.018357236426569536,
+        "Gender_Male": 0.05770043604368318
+      },
+      "n_samples": 1910
+    },
+    "Humerus_Breadth": {
+      "feature_importance": {
+        "Stature": 0.11766610423204113,
+        "Weight": 0.027943629406223545,
+        "Chest_Circumference": 0.011415065585419631,
+        "Hip_Circumference": 0.026989177812312866,
+        "Waist_Circumference": 0.043779564694820625,
+        "Thigh_Circumference": 0.017092452532921635,
+        "Ankle_Circumference": 0.11267262217481636,
+        "Shoulder_Breadth": 0.10433527011883163,
+        "Knee_Height": 0.09849428815843272,
+        "Arm_Circumference_Flexed": 0.02289225902969961,
+        "Calf_Circumference": 0.019891843624891093,
+        "BMI": 0.011335726497584861,
+        "Age": 0.006443305982573507,
+        "Gender_Male": 0.3790486901494309
+      },
+      "n_samples": 1910
+    },
+    "Femur_Breadth": {
+      "feature_importance": {
+        "Stature": 0.14924239316423935,
+        "Weight": 0.03188758664491469,
+        "Chest_Circumference": 0.009138398816901155,
+        "Hip_Circumference": 0.0214801261876845,
+        "Waist_Circumference": 0.032265232694853034,
+        "Thigh_Circumference": 0.013995814798698278,
+        "Ankle_Circumference": 0.1018613154401258,
+        "Shoulder_Breadth": 0.0965747267029187,
+        "Knee_Height": 0.12857923099187543,
+        "Arm_Circumference_Flexed": 0.023315437807170682,
+        "Calf_Circumference": 0.01834707485781283,
+        "BMI": 0.009612103470152485,
+        "Age": 0.005174249805903151,
+        "Gender_Male": 0.35852630861674994
+      },
+      "n_samples": 1910
+    },
+    "Arm_Circumference_Flexed": {
+      "feature_importance": {
+        "Stature": 0.032822124600529974,
+        "Weight": 0.01908222148144266,
+        "Chest_Circumference": 0.014310363642417721,
+        "Hip_Circumference": 0.013079963688763388,
+        "Waist_Circumference": 0.025510656960976652,
+        "Thigh_Circumference": 0.013575375490807373,
+        "Ankle_Circumference": 0.04542271618225008,
+        "Shoulder_Breadth": 0.04774905865106475,
+        "Knee_Height": 0.03364064800993885,
+        "Arm_Circumference_Flexed": 0.6360494927887433,
+        "Calf_Circumference": 0.01799657525256996,
+        "BMI": 0.012600799295311903,
+        "Age": 0.010809963818628686,
+        "Gender_Male": 0.07735004013655479
+      },
+      "n_samples": 1910
+    },
+    "Calf_Circumference": {
+      "feature_importance": {
+        "Stature": 0.011782812650696807,
+        "Weight": 0.11202305630088281,
+        "Chest_Circumference": 0.033521125878422035,
+        "Hip_Circumference": 0.023629890749389874,
+        "Waist_Circumference": 0.04018375816425926,
+        "Thigh_Circumference": 0.03478762089028378,
+        "Ankle_Circumference": 0.0592971496953077,
+        "Shoulder_Breadth": 0.0877279368065131,
+        "Knee_Height": 0.018803507682867378,
+        "Arm_Circumference_Flexed": 0.009586384558770505,
+        "Calf_Circumference": 0.4993403601844477,
+        "BMI": 0.026206021561042455,
+        "Age": 0.010977588846566442,
+        "Gender_Male": 0.03213278603055015
+      },
+      "n_samples": 1910
+    }
+  },
+  "corruption_applied": true,
+  "cnn_error_stats": {
+    "arm_circumference_flexed": {
+      "mean_error": 4.032730983709996,
+      "percent_bias": 1.195367304402769,
+      "std_error": 46.32486874897493,
+      "mae": 36.592369118561464,
+      "mean_ratio": 1.0311167928655354,
+      "mean_gt": 337.3633333333334,
+      "mean_pred": 341.3960643170433,
+      "gt_column": "Arm Circumference Flexed (cm)",
+      "unit_info": "(converted from cm to mm)"
+    },
+    "calf_circumference": {
+      "mean_error": 7.048021301105646,
+      "percent_bias": 1.9312822110773402,
+      "std_error": 32.797170521026274,
+      "mae": 25.996344538487726,
+      "mean_ratio": 1.026516205523928,
+      "mean_gt": 364.94,
+      "mean_pred": 371.98802130110556,
+      "gt_column": "Calf Circumference (cm)",
+      "unit_info": "(converted from cm to mm)"
+    }
+  }
+}

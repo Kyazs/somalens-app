@@ -1,0 +1,94 @@
+{
+    "timestamp": "2026-01-29T03:15:27.277307",
+    "dataset_path": "C:\\Users\\LENOVO\\Desktop\\Kekious_Maximus\\human-body-reshape-DL-paper\\somalens_paper\\data\\datasets\\CAESAR_full_imputation_dataset.csv",
+    "num_samples": 2388,
+    "features": [
+        "Stature_mm",
+        "Weight_kg",
+        "Age_yrs",
+        "BMI",
+        "Ponderal_Index"
+    ],
+    "targets": {
+        "Triceps_Skinfold": {
+            "filename": "svr_proxy_Triceps_Skinfold.pkl",
+            "mae": 5.40552476391591,
+            "r2": 0.47595978260004557,
+            "transform": "log1p",
+            "model_params": {
+                "C": 1.0,
+                "epsilon": 0.1
+            }
+        },
+        "Subscapular_Skinfold": {
+            "filename": "svr_proxy_Subscapular_Skinfold.pkl",
+            "mae": 4.65048278995004,
+            "r2": 0.6833938954933553,
+            "transform": "log1p",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Supraspinale_Skinfold": {
+            "filename": "svr_proxy_Supraspinale_Skinfold.pkl",
+            "mae": 5.329033778117517,
+            "r2": 0.6294312115376524,
+            "transform": "log1p",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Calf_Skinfold": {
+            "filename": "svr_proxy_Calf_Skinfold.pkl",
+            "mae": 4.1804222484635005,
+            "r2": 0.7476184514368627,
+            "transform": "log1p",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Humerus_Breadth": {
+            "filename": "svr_proxy_Humerus_Breadth.pkl",
+            "mae": 1.7221958767887537,
+            "r2": 0.6127296269482363,
+            "transform": "none",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Femur_Breadth": {
+            "filename": "svr_proxy_Femur_Breadth.pkl",
+            "mae": 2.46564067951091,
+            "r2": 0.6879056233539327,
+            "transform": "none",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Arm_Circumference_Flexed": {
+            "filename": "svr_proxy_Arm_Circumference_Flexed.pkl",
+            "mae": 10.966112739571368,
+            "r2": 0.6928004951885451,
+            "transform": "none",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        },
+        "Calf_Circumference": {
+            "filename": "svr_proxy_Calf_Circumference.pkl",
+            "mae": 10.608202401747631,
+            "r2": 0.8397680814402568,
+            "transform": "none",
+            "model_params": {
+                "C": 10.0,
+                "epsilon": 0.1
+            }
+        }
+    }
+}
