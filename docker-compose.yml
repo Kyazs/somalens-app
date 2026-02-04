@@ -16,9 +16,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/somalens
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/somalens
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
       - DEBUG=false
     depends_on:
       db:
@@ -33,9 +33,9 @@ services:
       dockerfile: docker/Dockerfile.prod
     command: celery -A app.core.celery_app worker --loglevel=info
     environment:
-      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/somalens
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/somalens
       - REDIS_URL=redis://redis:6379/0
-      - SECRET_KEY=dev-secret-key-change-in-production
+      - JWT_SECRET_KEY=dev-secret-key-change-in-production
     depends_on:
       - api
       - redis
