@@ -45,3 +45,8 @@ os.makedirs("data", exist_ok=True)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")
 
 app.include_router(api_router, prefix="/api/v1")
+
+
+@app.get("/health")
+def health_check():
+    return {"status": "ok"}

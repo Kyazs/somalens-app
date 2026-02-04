@@ -31,7 +31,7 @@ services:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile.prod
-    command: celery -A app.core.celery_app worker --loglevel=info
+    command: celery -A app.celery_worker worker --loglevel=info
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/somalens
       - REDIS_URL=redis://redis:6379/0
@@ -40,6 +40,8 @@ services:
       - api
       - redis
       - db
+    healthcheck:
+      disable: true
     restart: unless-stopped
 
   db:
