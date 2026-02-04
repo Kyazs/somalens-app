@@ -84,23 +84,15 @@ class MLService:
         self.is_loaded = True
 
     def preprocess_image(self, image_bytes: bytes) -> np.ndarray:
-        """
-        Preprocess image for CNN inference.
-        
-        Args:
-            image_bytes: Raw image bytes (JPEG/PNG)
-            
-        Returns:
-            Normalized numpy array of shape (224, 224, 3)
-        """
         img = Image.open(io.BytesIO(image_bytes))
-        img = img.convert("RGB")
+        img = img.convert("L")
         img = img.resize((224, 224), Image.Resampling.LANCZOS)
         arr = np.array(img, dtype=np.float32) / 255.0
+        arr = np.expand_dims(arr, axis=-1)
         return arr
 
     def extract_proxy_measurements(
-        self, front_image: bytes, side_image: bytes
+        self, front_image: bytes, side_image: bytes, age: int = 25, height_hint: float = 170.0, weight_hint: float = 70.0
     ) -> Dict[str, float]:
         """
         Extract proxy measurements from front and side images using CNN.
@@ -130,12 +122,12 @@ class MLService:
         front_arr = self.preprocess_image(front_image)
         side_arr = self.preprocess_image(side_image)
 
-        # Stack for batch inference (model expects 2 images)
-        batch = np.stack([front_arr, side_arr], axis=0)
-        batch = np.expand_dims(batch, axis=0)  # Add batch dimension
+        numca_input = np.array([[age, height_hint, weight_hint]], dtype=np.float32)
+        front_input = np.expand_dims(front_arr, axis=0)
+        side_input = np.expand_dims(side_arr, axis=0)
 
-        # Run inference
-        predictions = self.cnn_model.predict(batch, verbose=0)
+        predictions = self.cnn_model.predict([numca_input, front_input, side_input], verbose=0)
+        predictions = np.real(predictions).astype(np.float64)
 
         # Map to measurement names (9 outputs)
         measurement_names = [
@@ -152,7 +144,15 @@ class MLService:
 
         result = {}
         for i, name in enumerate(measurement_names):
-            result[name] = float(predictions[0][i])
+            val = predictions[0][i]
+            if hasattr(val, 'real'):
+                val = val.real
+            
+            # Clamp to minimum positive value to avoid complex number errors in downstream calcs
+            if val <= 0.1:
+                val = 0.1
+                
+            result[name] = float(val)
 
         return result
 
@@ -172,6 +172,9 @@ class MLService:
         Returns:
             Dictionary with Triceps, Subscapular, Supraspinale skinfolds in mm
         """
+        height_cm = abs(height_cm) if height_cm else 170.0
+        weight_kg = abs(weight_kg) if weight_kg else 70.0
+        
         bmi = weight_kg / ((height_cm / 100) ** 2)
         ponderal_index = height_cm / (weight_kg ** (1 / 3))
 
@@ -261,7 +264,8 @@ class MLService:
             else:
                 features.append(proxy_measurements.get(feat, 0))
 
-        x_input = np.array([features])
+        x_input = np.array([features], dtype=np.float64)
+        x_input = np.real(x_input)
         x_scaled = self.rf_scaler_x.transform(x_input)
 
         # Predict each target
@@ -274,12 +278,16 @@ class MLService:
                 predictions.append(0)
 
         # Inverse scale predictions
-        preds_array = np.array([predictions])
+        preds_array = np.array([predictions], dtype=np.float64)
+        preds_array = np.real(preds_array)
         preds_unscaled = self.rf_scaler_y.inverse_transform(preds_array)
 
         result = {}
         for i, target in enumerate(self.rf_metadata.get("target_measurements", [])):
-            result[target] = float(preds_unscaled[0][i])
+            val = preds_unscaled[0][i]
+            if hasattr(val, 'real'):
+                val = val.real
+            result[target] = float(val)
 
         return result
 
@@ -305,31 +313,61 @@ def process_measurement(measurement_id: int):
         if not measurement:
             return f"Measurement {measurement_id} not found"
 
-        # Download images
+        # Read images from filesystem (shared volume) instead of HTTP
+        # Extract filename from URL: http://host/static/{filename} -> {filename}
         try:
-            front_resp = requests.get(measurement.front_image_url)
-            front_resp.raise_for_status()
-            front_bytes = front_resp.content
-
-            side_resp = requests.get(measurement.side_image_url)
-            side_resp.raise_for_status()
-            side_bytes = side_resp.content
+            front_filename = measurement.front_image_url.split("/static/")[-1]
+            side_filename = measurement.side_image_url.split("/static/")[-1]
+            
+            uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+            
+            # Fallback: Try multiple possible paths for uploads directory
+            possible_dirs = [
+                uploads_dir,  # app/uploads (relative to app/)
+                "/app/uploads",  # Docker absolute path
+                os.path.join(os.getcwd(), "uploads"),  # Current working dir
+            ]
+            
+            upload_path = None
+            for dir_path in possible_dirs:
+                if os.path.exists(os.path.join(dir_path, front_filename)):
+                    upload_path = dir_path
+                    break
+            
+            if not upload_path:
+                return f"Error: Could not find uploads directory containing {front_filename}. Tried: {possible_dirs}"
+            
+            front_path = os.path.join(upload_path, front_filename)
+            side_path = os.path.join(upload_path, side_filename)
+            
+            with open(front_path, "rb") as f:
+                front_bytes = f.read()
+            with open(side_path, "rb") as f:
+                side_bytes = f.read()
         except Exception as e:
-            return f"Error downloading images for {measurement_id}: {e}"
+            return f"Error reading images for {measurement_id}: {e}"
 
         # 1. Extract Proxy Measurements (CNN)
-        proxy = ml_service.extract_proxy_measurements(front_bytes, side_bytes)
+        age = measurement.age if measurement.age else 25
+        proxy = ml_service.extract_proxy_measurements(
+            front_bytes, 
+            side_bytes,
+            age=age,
+            height_hint=170.0,
+            weight_hint=70.0
+        )
         
         # Update basic info
         measurement.weight = proxy.get("Weight")
         measurement.height = proxy.get("Stature")
+        
+        height_cm: float = measurement.height if measurement.height is not None else 170.0
+        weight_kg: float = measurement.weight if measurement.weight is not None else 70.0
 
         # 2. Predict Skinfolds (SVR)
-        # Default age to 25 if missing
-        age = measurement.age if measurement.age else 25
         skinfolds = ml_service.predict_skinfolds_svr(
-            height_cm=measurement.height,
-            weight_kg=measurement.weight,
+            height_cm=height_cm,
+            weight_kg=weight_kg,
             age=age
         )
 
@@ -355,8 +393,8 @@ def process_measurement(measurement_id: int):
         calf_girth = rf_inputs.get("Calf_Circumference", 0)
 
         somato = calculate_heath_carter(
-            height_cm=measurement.height,
-            weight_kg=measurement.weight,
+            height_cm=height_cm,
+            weight_kg=weight_kg,
             triceps_mm=triceps,
             subscapular_mm=subscapular,
             supraspinale_mm=supraspinale,
