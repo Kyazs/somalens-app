@@ -17,6 +17,7 @@ export interface LoginResponse {
 }
 
 export interface AnalysisResponse {
+  id?: number;
   proxy_measurements: Record<string, number>;
   heath_carter_inputs: Record<string, number>;
   somatotype: {
@@ -26,6 +27,32 @@ export interface AnalysisResponse {
     classification: string;
     hwr: number;
   };
+}
+
+export interface MeasurementResponse {
+  id: number;
+  user_id: number;
+  front_image_url: string;
+  side_image_url: string;
+  age: number;
+  gender: string;
+  height: number | null;
+  weight: number | null;
+  somatotype_class: string | null;
+  somatotype_endo: number | null;
+  somatotype_meso: number | null;
+  somatotype_ecto: number | null;
+  chest_circumference: number | null;
+  waist_circumference: number | null;
+  hip_circumference: number | null;
+  arm_circumference: number | null;
+  thigh_circumference: number | null;
+  calf_circumference: number | null;
+  skinfold_triceps: number | null;
+  skinfold_subscapular: number | null;
+  skinfold_supraspinale: number | null;
+  skinfold_calf: number | null;
+  created_at: string;
 }
 
 const axiosInstance: AxiosInstance = axios.create({
@@ -113,20 +140,16 @@ export const api = {
     sideImage: Blob, 
     age: number, 
     gender: 'male' | 'female',
-    heightCm?: number,
-    weightKg?: number
+    heightCm: number,
+    weightKg: number
   ): Promise<AnalysisResponse> => {
     const formData = new FormData();
     formData.append('front_image', frontImage, 'front.jpg');
     formData.append('side_image', sideImage, 'side.jpg');
     formData.append('age', age.toString());
     formData.append('gender', gender);
-    if (heightCm) {
-      formData.append('user_height_cm', heightCm.toString());
-    }
-    if (weightKg) {
-      formData.append('user_weight_kg', weightKg.toString());
-    }
+    formData.append('user_height_cm', heightCm.toString());
+    formData.append('user_weight_kg', weightKg.toString());
 
     const response = await axiosInstance.post<AnalysisResponse>('/measurements/analyze', formData, {
       headers: {
@@ -144,5 +167,42 @@ export const api = {
   saveMeasurement: async (sessionData: any): Promise<MeasurementSession> => {
       const response = await axiosInstance.post<MeasurementSession>('/measurements/save', sessionData);
       return response.data;
+  },
+
+  getMeasurement: async (id: number): Promise<MeasurementResponse> => {
+      const response = await axiosInstance.get<MeasurementResponse>(`/history/${id}`);
+      return response.data;
+  },
+
+  pollMeasurementUntilComplete: async (
+    id: number, 
+    onProgress?: (status: string) => void,
+    maxAttempts: number = 60,
+    intervalMs: number = 2000
+  ): Promise<MeasurementResponse> => {
+    const progressMessages = [
+      'Uploading images...',
+      'Processing images...',
+      'Extracting body measurements...',
+      'Calculating somatotype...',
+      'Analyzing body composition...',
+      'Finalizing results...'
+    ];
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const measurement = await api.getMeasurement(id);
+      
+      if (measurement.somatotype_class !== null) {
+        onProgress?.('Complete!');
+        return measurement;
+      }
+      
+      const msgIndex = Math.min(attempt, progressMessages.length - 1);
+      onProgress?.(progressMessages[msgIndex]);
+      
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+    }
+    
+    throw new Error('Processing timeout. Please try again.');
   }
 };

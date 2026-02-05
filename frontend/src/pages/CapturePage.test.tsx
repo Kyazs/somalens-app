@@ -30,10 +30,19 @@ vi.mock('../hooks/useImageCapture', () => ({
 vi.mock('../stores/captureStore', () => ({
   useCaptureStore: () => ({
     step: 'front',
+    userData: {
+        name: '',
+        age: '',
+        height: '',
+        weight: '',
+        gender: 'male'
+    },
+    setUserData: vi.fn(),
     setFrontImage: vi.fn(),
     setSideImage: vi.fn(),
     goToSideCapture: vi.fn(),
     goToPreview: vi.fn(),
+    reset: vi.fn(),
   }),
 }));
 
@@ -49,12 +58,12 @@ describe('CapturePage', () => {
     });
   });
 
-  it('renders correctly', () => {
+  it('renders setup form initially', () => {
     render(
       <MemoryRouter>
         <CapturePage />
       </MemoryRouter>
     );
-    expect(screen.getByText('Frontal Scan')).toBeTruthy();
+    expect(screen.getByText('Profile Setup')).toBeTruthy();
   });
 });

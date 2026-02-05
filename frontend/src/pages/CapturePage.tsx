@@ -114,9 +114,29 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
 
 const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
   const { userData, setUserData } = useCaptureStore();
+  const [error, setError] = useState<string | null>(null);
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    const age = parseInt(userData.age);
+    const height = parseInt(userData.height);
+    const weight = parseInt(userData.weight);
+
+    if (isNaN(age) || age < 10 || age > 100) {
+      setError("Age must be between 10 and 100 years");
+      return;
+    }
+    if (isNaN(height) || height < 100 || height > 250) {
+      setError("Height must be between 100 and 250 cm");
+      return;
+    }
+    if (isNaN(weight) || weight < 30 || weight > 200) {
+      setError("Weight must be between 30 and 200 kg");
+      return;
+    }
+    
+    setError(null);
     onComplete();
   };
 
@@ -128,6 +148,12 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
           <h1 className="text-3xl font-bold">Profile Setup</h1>
           <p className="text-white/60 mt-2">Enter your metrics for accurate analysis</p>
         </div>
+
+        {error && (
+            <div className="p-4 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-sm text-center">
+                {error}
+            </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
@@ -148,7 +174,7 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                         <input 
                             type="number" 
                             required
-                            min="1" max="120"
+                            min="10" max="100"
                             value={userData.age}
                             onChange={e => setUserData({ age: e.target.value })}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
@@ -173,7 +199,7 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                         <input 
                             type="number" 
                             required
-                            min="50" max="300"
+                            min="100" max="250"
                             value={userData.height}
                             onChange={e => setUserData({ height: e.target.value })}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
@@ -185,7 +211,7 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                         <input 
                             type="number" 
                             required
-                            min="20" max="500"
+                            min="30" max="200"
                             value={userData.weight}
                             onChange={e => setUserData({ weight: e.target.value })}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
@@ -220,14 +246,38 @@ const MethodSelection = ({
     const [selectedDevice, setSelectedDevice] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        navigator.mediaDevices.enumerateDevices().then(devs => {
+    const loadDevices = useCallback(async () => {
+        setLoading(true);
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true });
+            
+            const devs = await navigator.mediaDevices.enumerateDevices();
+
             const videoDevs = devs.filter(d => d.kind === 'videoinput');
+            console.log("Devices found:", videoDevs);
+            
             setDevices(videoDevs);
-            if (videoDevs.length > 0) setSelectedDevice(videoDevs[0].deviceId);
+            if (videoDevs.length > 0 && !selectedDevice) {
+                setSelectedDevice(videoDevs[0].deviceId);
+            }
+        } catch (err) {
+            console.error("Error loading devices:", err);
+        } finally {
             setLoading(false);
-        });
-    }, []);
+        }
+    }, [selectedDevice]);
+
+    useEffect(() => {
+        loadDevices();
+        
+        const handleDeviceChange = () => {
+            console.log("Device change detected");
+            loadDevices();
+        };
+
+        navigator.mediaDevices.addEventListener('devicechange', handleDeviceChange);
+        return () => navigator.mediaDevices.removeEventListener('devicechange', handleDeviceChange);
+    }, [loadDevices]);
 
     return (
         <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
@@ -257,16 +307,25 @@ const MethodSelection = ({
                                 >
                                     {devices.map(d => (
                                         <option key={d.deviceId} value={d.deviceId}>
-                                            {d.label || `Camera ${devices.indexOf(d) + 1}`}
+                                            {d.label || `Camera ${devices.indexOf(d) + 1} (${d.deviceId.slice(0, 5)}...)`}
                                         </option>
                                     ))}
                                 </select>
-                                <button 
-                                    onClick={() => onCameraSelect(selectedDevice)}
-                                    className="w-full bg-emerald-500 text-black font-bold py-2 rounded-lg hover:bg-emerald-400"
-                                >
-                                    Start Camera
-                                </button>
+                                <div className="flex gap-2">
+                                    <button 
+                                        onClick={loadDevices}
+                                        className="bg-white/10 text-white px-3 py-2 rounded-lg hover:bg-white/20 transition-colors"
+                                        title="Refresh Camera List"
+                                    >
+                                        🔄
+                                    </button>
+                                    <button 
+                                        onClick={() => onCameraSelect(selectedDevice)}
+                                        className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-lg hover:bg-emerald-400"
+                                    >
+                                        Start Camera
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -300,6 +359,8 @@ export function CapturePage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturePhase, setCapturePhase] = useState<'setup' | 'method' | 'capture' | 'upload'>('setup');
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
+  const [rotation, setRotation] = useState(0);
 
   // State for current frame analysis
   const [currentLandmarks, setCurrentLandmarks] = useState<NormalizedLandmark[] | null>(null);
@@ -336,8 +397,9 @@ export function CapturePage() {
         const constraints = {
             video: {
                 deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-                width: { ideal: 1920 },
-                height: { ideal: 1080 }
+                width: orientation === 'portrait' ? { ideal: 1080 } : { ideal: 1920 },
+                height: orientation === 'portrait' ? { ideal: 1920 } : { ideal: 1080 },
+                aspectRatio: orientation === 'portrait' ? { ideal: 0.5625 } : { ideal: 1.7777777778 }
             }
         };
         const stream = await navigator.mediaDevices.getUserMedia(constraints);
@@ -366,7 +428,7 @@ export function CapturePage() {
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [capturePhase, step, selectedDeviceId]);
+  }, [capturePhase, step, selectedDeviceId, orientation]);
 
   // Pose Detection Loop
   const animate = useCallback(() => {
@@ -377,7 +439,35 @@ export function CapturePage() {
       step !== 'preview' &&
       capturePhase === 'capture'
     ) {
-      const result = detectPose(videoRef.current, performance.now());
+      // Determine what to send to MediaPipe
+      let inputElement: HTMLVideoElement | HTMLCanvasElement = videoRef.current;
+      
+      // If rotated, we must draw to an offscreen canvas first so MediaPipe sees the upright image
+      if (rotation !== 0) {
+          const canvas = document.createElement('canvas');
+          // Swap dimensions if 90/270
+          if (rotation === 90 || rotation === 270) {
+              canvas.width = videoRef.current.videoHeight;
+              canvas.height = videoRef.current.videoWidth;
+          } else {
+              canvas.width = videoRef.current.videoWidth;
+              canvas.height = videoRef.current.videoHeight;
+          }
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+              ctx.translate(canvas.width / 2, canvas.height / 2);
+              ctx.rotate((rotation * Math.PI) / 180);
+               if (rotation === 90 || rotation === 270) {
+                  ctx.drawImage(videoRef.current, -videoRef.current.videoWidth / 2, -videoRef.current.videoHeight / 2);
+               } else {
+                  ctx.drawImage(videoRef.current, -videoRef.current.videoWidth / 2, -videoRef.current.videoHeight / 2);
+               }
+               inputElement = canvas;
+          }
+      }
+
+      const result = detectPose(inputElement, performance.now());
       
       if (result && result.landmarks && result.landmarks.length > 0) {
         const landmarks = result.landmarks[0];
@@ -414,6 +504,14 @@ export function CapturePage() {
     setCountdown(3);
   };
 
+  const handleRotate = () => {
+      setRotation(prev => (prev + 90) % 360);
+  };
+
+  const toggleOrientation = () => {
+      setOrientation(prev => prev === 'portrait' ? 'landscape' : 'portrait');
+  };
+
   useEffect(() => {
     if (countdown === null) return;
 
@@ -430,7 +528,7 @@ export function CapturePage() {
         setTimeout(() => setIsFlashing(false), 150);
 
         try {
-          const blob = await captureFrame(videoRef.current);
+          const blob = await captureFrame(videoRef.current, rotation);
           const previewUrl = createPreview(blob);
 
           // Small delay to let flash finish visually before switching steps
@@ -527,6 +625,19 @@ export function CapturePage() {
                     <span className={`text-xs font-bold uppercase tracking-widest ${step === 'side' ? 'text-white' : 'text-white/40'}`}>Side</span>
                 </div>
             </div>
+             {/* Rotate Button */}
+            <button 
+                onClick={handleRotate}
+                className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+            >
+                <span>🔄</span> Rotate
+            </button>
+            <button 
+                onClick={toggleOrientation}
+                className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+            >
+                <span>↔️</span> {orientation === 'portrait' ? 'Landscape' : 'Portrait'}
+            </button>
             {/* Added: Back Button to Method Selection */}
             <button 
                 onClick={() => setCapturePhase('method')}
@@ -537,18 +648,28 @@ export function CapturePage() {
         </div>
       </header>
 
-      <main className="flex-1 relative bg-black">
+      <main className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
         <div 
             className={`absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-150 ease-out ${isFlashing ? 'opacity-100' : 'opacity-0'}`} 
         />
 
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          muted
-          className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
-        />
+        {/* Video Container to handle rotation/scaling cleanly */}
+        <div 
+            className="relative transition-transform duration-300 ease-out"
+            style={{
+                width: '100%',
+                height: '100%',
+                transform: `rotate(${rotation}deg)`
+            }}
+        >
+            <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
+            />
+        </div>
 
         {countdown !== null && countdown > 0 && (
             <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
