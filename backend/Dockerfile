@@ -41,6 +41,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy torch models
 COPY --from=builder /app/models /app/models
+ENV TORCH_HOME=/app/data/torch
 
 # Copy application code
 COPY app/ ./app/
