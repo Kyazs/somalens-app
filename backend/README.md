@@ -22,6 +22,74 @@ FastAPI backend with SQLModel, Celery, and JWT authentication for robust, scalab
 - **JWT** - Authentication
 - **SQLite** - Development database
 
+## ML Pipeline Architecture
+
+SomaLens uses a multi-stage ML pipeline for somatotype estimation:
+
+### Pipeline Flow
+```
+Input Image → DeepLabV3 Segmentation → Scale Normalization → CNN Extraction → Ultra V3 Prediction → Heath-Carter Somatotype
+```
+
+### Components
+
+1. **DeepLabV3 Segmentation** (`app/utils/segmentation.py`)
+   - Extracts person silhouette from input photos
+   - Uses pretrained DeepLabV3-ResNet101 model
+   - Outputs binary mask (person vs background)
+
+2. **Scale Normalization** (`app/utils/scale_normalization.py`)
+   - Normalizes body size to 85% of frame height
+   - Resizes to 224x224 for CNN input
+   - Ensures consistent scale across inputs
+
+3. **CNN Proxy Measurement Extraction** (`app/tasks/ml.py`)
+   - Multi-input CNN with gender and stature
+   - Outputs anthropometric proxy measurements
+   - Input format: [gender_onehot, stature/200]
+
+4. **Ultra V3 Predictor** (`app/services/ultra_v3_predictor.py`)
+   - SVR models for skinfold predictions
+   - RF models for breadths and girths
+   - Filipino calibration coefficients applied
+
+5. **Heath-Carter Somatotype** (`app/services/somatotype.py`)
+   - Calculates endomorphy, mesomorphy, ectomorphy
+   - Classifies somatotype (e.g., "Mesomorph-Endomorph")
+
+## Dependencies
+
+### PyTorch (New)
+The ML pipeline requires PyTorch for DeepLabV3 segmentation:
+- `torch>=2.2.0` (CPU version)
+- `torchvision>=0.17.0`
+
+The Dockerfile automatically downloads DeepLabV3 weights during build.
+
+### Other ML Dependencies
+- TensorFlow 2.16.1 (CNN model)
+- scikit-learn (SVR/RF models)
+- NumPy, Pillow (image processing)
+
+## API Changes
+
+### Required Demographic Fields
+
+The `/api/v1/measurements` endpoint now requires additional demographic data:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `height` | float | **Yes** | Height in cm |
+| `weight` | float | **Yes** | Weight in kg |
+| `age` | int | **Yes** | Age in years |
+| `gender` | string | **Yes** | "male" or "female" |
+| `waist_circumference` | float | Recommended | Waist in cm (improves accuracy) |
+
+These fields are used for:
+- CNN input encoding (gender, stature)
+- Ultra V3 calibration (height, weight, age)
+- Fat factor modulation (waist-to-height ratio)
+
 ## Prerequisites
 
 - Python 3.10 or higher
@@ -89,3 +157,35 @@ make migrate
 5. **Access documentation** at `http://localhost:8000/docs`
 
 For more information, check the API documentation at `/docs` once the server is running.
+
+## Troubleshooting
+
+### Common Issues
+
+**PyTorch not found**
+```
+ModuleNotFoundError: No module named 'torch'
+```
+Solution: Ensure you're using the Docker image or install PyTorch manually:
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+```
+
+**DeepLabV3 model not loading**
+```
+Error loading segmentation model
+```
+Solution: The model should be baked into Docker. If running locally:
+```python
+import torch
+torch.hub.load('pytorch/vision:v0.10.0', 'deeplabv3_resnet101', pretrained=True)
+```
+
+**Missing demographic data**
+```
+ValueError: Missing required field: height
+```
+Solution: Ensure all required fields are provided in the API request.
+
+**Segmentation returns empty mask**
+Solution: Check image quality - person should be clearly visible and upright.
