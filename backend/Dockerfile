@@ -13,7 +13,12 @@ RUN pip install uv
 
 # Copy and install dependencies
 COPY pyproject.toml ./
-RUN uv pip install --system -e .
+RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -e .
+
+# Pre-download DeepLabV3 weights
+ENV TORCH_HOME=/app/models/torch
+RUN mkdir -p /app/models && \
+    python -c "import torchvision; import torch; url = torchvision.models.segmentation.DeepLabV3_ResNet101_Weights.DEFAULT.url; torch.hub.download_url_to_file(url, '/app/models/deeplabv3_resnet101.pth')"
 
 # Production stage
 FROM python:3.10-slim
@@ -33,6 +38,9 @@ WORKDIR /app
 # Copy installed packages from builder
 COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copy torch models
+COPY --from=builder /app/models /app/models
 
 # Copy application code
 COPY app/ ./app/
