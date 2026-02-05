@@ -1,17 +1,20 @@
 """
 ML Task for body measurement extraction.
 
-Loads CNN + RF/SVR models and provides inference functions wrapped in Celery task.
+Orchestrates the full pipeline:
+1. Image -> Segmentation -> Normalization
+2. CNN Extraction
+3. Ultra V3 Prediction (SVR+RF+Calibration)
+4. Measurement Averaging
+5. Heath-Carter Calculation
 """
 
 import os
-import pickle
-import json
-import numpy as np
-from typing import Dict, Any, Optional
-from PIL import Image
 import io
-import requests
+import numpy as np
+import pandas as pd
+from typing import Dict, Any, Tuple, Optional
+from PIL import Image
 
 from app.celery_worker import celery_app
 from app.database import engine
@@ -19,8 +22,11 @@ from sqlmodel import Session
 from app.models.measurement import Measurement
 from app.services.somatotype import calculate_heath_carter, classify_somatotype
 
+from app.utils.segmentation import DeepLabV3Segmenter
+from app.utils.scale_normalization import normalize_silhouette_scale
+from app.services.ultra_v3_predictor import UltraV3Predictor
+
 # Path to model files
-# ../ml_models relative to app/tasks/ml.py
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models")
 
 
@@ -29,11 +35,8 @@ class MLService:
 
     def __init__(self):
         self.cnn_model = None
-        self.rf_models: Dict[str, Any] = {}
-        self.rf_scaler_x = None
-        self.rf_scaler_y = None
-        self.rf_metadata: Dict[str, Any] = {}
-        self.svr_models: Dict[str, Any] = {}
+        self.segmenter: Optional[DeepLabV3Segmenter] = None
+        self.ultra_v3_predictor: Optional[UltraV3Predictor] = None
         self.is_loaded = False
 
     def load_models(self) -> None:
@@ -52,36 +55,31 @@ class MLService:
         except Exception as e:
             print(f"Warning: Could not load CNN model: {e}")
             self.cnn_model = None
-
-        # 2. Load RF models and scalers
-        try:
-            with open(os.path.join(MODELS_DIR, "rf_v2.2n_scaler_X.pkl"), "rb") as f:
-                self.rf_scaler_x = pickle.load(f)
-            with open(os.path.join(MODELS_DIR, "rf_v2.2n_scaler_y.pkl"), "rb") as f:
-                self.rf_scaler_y = pickle.load(f)
-            with open(os.path.join(MODELS_DIR, "rf_v2.2n_metadata.json"), "r") as f:
-                self.rf_metadata = json.load(f)
-
-            for target in self.rf_metadata.get("target_measurements", []):
-                rf_path = os.path.join(MODELS_DIR, f"rf_v2.2n_{target}.pkl")
-                with open(rf_path, "rb") as f:
-                    self.rf_models[target] = pickle.load(f)
-            print(f"Loaded {len(self.rf_models)} RF models")
-        except Exception as e:
-            print(f"Warning: Could not load RF models: {e}")
-
-        # 3. Load SVR models for skinfolds
-        svr_targets = ["Triceps_Skinfold", "Subscapular_Skinfold", "Supraspinale_Skinfold"]
-        for target in svr_targets:
-            svr_path = os.path.join(MODELS_DIR, f"svr_proxy_{target}.pkl")
-            try:
-                with open(svr_path, "rb") as f:
-                    self.svr_models[target] = pickle.load(f)
-            except FileNotFoundError:
-                print(f"Warning: SVR model not found: {svr_path}")
-        print(f"Loaded {len(self.svr_models)} SVR models")
-
+            
         self.is_loaded = True
+
+    def process_image_pipeline(self, image_bytes: bytes) -> np.ndarray:
+        """
+        Process raw image through segmentation + normalization pipeline.
+        
+        Returns:
+            Normalized silhouette (224, 224, 1) float32, values 0-1
+        """
+        if self.segmenter is None:
+            self.segmenter = DeepLabV3Segmenter()
+        
+        # Load image
+        img = Image.open(io.BytesIO(image_bytes))
+        img_array = np.array(img.convert('RGB'))
+        
+        # Step 1: Extract silhouette using DeepLabV3
+        silhouette = self.segmenter.extract_silhouette(img_array)  # (448, 448, 1)
+        
+        # Step 2: Normalize scale to 85% coverage, resize to 224x224
+        normalized = normalize_silhouette_scale(silhouette)  # (224, 224, 1)
+        
+        # Convert to float32, normalize to 0-1
+        return normalized.astype(np.float32) / 255.0
 
     def extract_proxy_measurements(
         self, 
@@ -157,139 +155,31 @@ class MLService:
 
         return result
 
-    def predict_skinfolds_svr(
-        self, height_cm: float, weight_kg: float, age: int
-    ) -> Dict[str, float]:
+    def combine_measurements(self, cnn_measurements: Dict, ultra_v3_result: pd.DataFrame) -> Dict:
         """
-        Predict skinfolds using SVR models.
+        Average overlapping measurements from CNN and Ultra V3.
         
-        SVR input features: [Stature_mm, Weight_kg, Age, BMI, Ponderal_Index]
-        
-        Args:
-            height_cm: Height in centimeters
-            weight_kg: Weight in kilograms
-            age: Age in years
-            
-        Returns:
-            Dictionary with Triceps, Subscapular, Supraspinale skinfolds in mm
+        Arm_Circumference_Flexed and Calf_Circumference are available from both sources.
         """
-        height_cm = abs(height_cm) if height_cm else 170.0
-        weight_kg = abs(weight_kg) if weight_kg else 70.0
-        
-        bmi = weight_kg / ((height_cm / 100) ** 2)
-        ponderal_index = height_cm / (weight_kg ** (1 / 3))
-
-        x_base = np.array(
-            [[height_cm * 10, weight_kg, age, bmi, ponderal_index]]  # Stature in mm
-        )
-
         result = {}
-        for target in ["Triceps_Skinfold", "Subscapular_Skinfold", "Supraspinale_Skinfold"]:
-            if target in self.svr_models:
-                pred = self.svr_models[target].predict(x_base)
-                # Apply expm1 (inverse of log1p used during training)
-                result[target] = float(np.expm1(pred[0]))
-            else:
-                # Fallback mock values
-                result[target] = 12.0
-
-        return result
-
-    def predict_heath_carter_inputs_rf(
-        self,
-        proxy_measurements: Dict[str, float],
-        age: int,
-        gender: str,
-    ) -> Dict[str, float]:
-        """
-        Predict Heath-Carter input measurements using RF models.
         
-        Args:
-            proxy_measurements: CNN output measurements
-            age: Age in years
-            gender: 'male' or 'female'
-            
-        Returns:
-            Dictionary with all 8 Heath-Carter input measurements
-        """
-        if not self.rf_models or not self.rf_scaler_x or not self.rf_scaler_y:
-            # Return mock data
-            return {
-                "Triceps_Skinfold": 12.0,
-                "Subscapular_Skinfold": 15.0,
-                "Supraspinale_Skinfold": 12.0,
-                "Calf_Skinfold": 10.0,
-                "Humerus_Breadth": 7.0,
-                "Femur_Breadth": 9.5,
-                "Arm_Circumference_Flexed": 32.0,
-                "Calf_Circumference": 36.0,
-            }
-
-        # Build feature vector for RF
-        bmi = proxy_measurements.get("Weight", 70) / (
-            (proxy_measurements.get("Stature", 170) / 100) ** 2
-        )
-        gender_male = 1 if gender.lower() == "male" else 0
-
-        # RF expects these features in specific order (from metadata)
-        feature_order = self.rf_metadata.get(
-            "proxy_measurements",
-            [
-                "Stature",
-                "Weight",
-                "Chest_Circumference",
-                "Hip_Circumference",
-                "Waist_Circumference",
-                "Thigh_Circumference",
-                "Ankle_Circumference",
-                "Shoulder_Breadth",
-                "Knee_Height",
-                "Arm_Circumference_Flexed",
-                "Calf_Circumference",
-                "BMI",
-                "Age",
-                "Gender_Male",
-            ],
-        )
-
-        features = []
-        for feat in feature_order:
-            if feat == "BMI":
-                features.append(bmi)
-            elif feat == "Age":
-                features.append(age)
-            elif feat == "Gender_Male":
-                features.append(gender_male)
-            elif feat == "Stature":
-                features.append(proxy_measurements.get(feat, 170) * 10)  # Convert to mm
-            else:
-                features.append(proxy_measurements.get(feat, 0))
-
-        x_input = np.array([features], dtype=np.float64)
-        x_input = np.real(x_input)
-        x_scaled = self.rf_scaler_x.transform(x_input)
-
-        # Predict each target
-        predictions = []
-        for target in self.rf_metadata.get("target_measurements", []):
-            if target in self.rf_models:
-                pred = self.rf_models[target].predict(x_scaled)
-                predictions.append(pred[0])
-            else:
-                predictions.append(0)
-
-        # Inverse scale predictions
-        preds_array = np.array([predictions], dtype=np.float64)
-        preds_array = np.real(preds_array)
-        preds_unscaled = self.rf_scaler_y.inverse_transform(preds_array)
-
-        result = {}
-        for i, target in enumerate(self.rf_metadata.get("target_measurements", [])):
-            val = preds_unscaled[0][i]
-            if hasattr(val, 'real'):
-                val = val.real
-            result[target] = float(val)
-
+        # From Ultra V3 (calibrated skinfolds)
+        result['Triceps_Skinfold'] = float(ultra_v3_result['Triceps_Skinfold'].iloc[0])
+        result['Subscapular_Skinfold'] = float(ultra_v3_result['Subscapular_Skinfold'].iloc[0])
+        result['Supraspinale_Skinfold'] = float(ultra_v3_result['Supraspinale_Skinfold'].iloc[0])
+        result['Calf_Skinfold'] = float(ultra_v3_result['Calf_Skinfold'].iloc[0])
+        result['Humerus_Breadth'] = float(ultra_v3_result['Humerus_Breadth'].iloc[0])
+        result['Femur_Breadth'] = float(ultra_v3_result['Femur_Breadth'].iloc[0])
+        
+        # Average girths from CNN + Ultra V3
+        cnn_arm = cnn_measurements.get('Arm_Circumference_Flexed', 0) or 0
+        ultra_arm = float(ultra_v3_result['Arm_Circumference_Flexed'].iloc[0])
+        result['Arm_Circumference_Flexed'] = (cnn_arm + ultra_arm) / 2 if cnn_arm > 0 else ultra_arm
+        
+        cnn_calf = cnn_measurements.get('Calf_Circumference', 0) or 0
+        ultra_calf = float(ultra_v3_result['Calf_Circumference'].iloc[0])
+        result['Calf_Circumference'] = (cnn_calf + ultra_calf) / 2 if cnn_calf > 0 else ultra_calf
+        
         return result
 
 
@@ -297,127 +187,130 @@ class MLService:
 ml_service = MLService()
 
 
+def read_images_from_filesystem(measurement: Measurement) -> Tuple[bytes, bytes]:
+    """Helper to read image bytes from filesystem."""
+    if not measurement.front_image_url or not measurement.side_image_url:
+        raise ValueError(f"Measurement {measurement.id} missing image URLs")
+        
+    try:
+        front_filename = measurement.front_image_url.split("/static/")[-1]
+        side_filename = measurement.side_image_url.split("/static/")[-1]
+        
+        uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+        
+        # Fallback: Try multiple possible paths for uploads directory
+        possible_dirs = [
+            uploads_dir,  # app/uploads (relative to app/)
+            "/app/uploads",  # Docker absolute path
+            os.path.join(os.getcwd(), "uploads"),  # Current working dir
+        ]
+        
+        upload_path = None
+        for dir_path in possible_dirs:
+            if os.path.exists(os.path.join(dir_path, front_filename)):
+                upload_path = dir_path
+                break
+        
+        if not upload_path:
+            raise ValueError(f"Error: Could not find uploads directory containing {front_filename}. Tried: {possible_dirs}")
+        
+        front_path = os.path.join(upload_path, front_filename)
+        side_path = os.path.join(upload_path, side_filename)
+        
+        with open(front_path, "rb") as f:
+            front_bytes = f.read()
+        with open(side_path, "rb") as f:
+            side_bytes = f.read()
+            
+        return front_bytes, side_bytes
+    except Exception as e:
+        raise ValueError(f"Error reading images for {measurement.id}: {e}")
+
+
 @celery_app.task(name="process_measurement")
 def process_measurement(measurement_id: int):
     """
-    Celery task to process measurement:
-    1. Fetch measurement and images
-    2. Run ML inference
-    3. Calculate Somatotype
-    4. Update DB
+    Celery task to process measurement with full ML pipeline:
+    1. Read images
+    2. Segmentation + Normalization
+    3. CNN Feature Extraction
+    4. Ultra V3 Prediction
+    5. Measurement Combination
+    6. Heath-Carter Calculation
     """
-    # Ensure models are loaded
     ml_service.load_models()
-
+    
     with Session(engine) as session:
         measurement = session.get(Measurement, measurement_id)
         if not measurement:
-            return f"Measurement {measurement_id} not found"
-
-        # Read images from filesystem (shared volume) instead of HTTP
-        # Extract filename from URL: http://host/static/{filename} -> {filename}
+            raise ValueError(f"Measurement {measurement_id} not found")
+        
+        # Read images
         try:
-            front_filename = measurement.front_image_url.split("/static/")[-1]
-            side_filename = measurement.side_image_url.split("/static/")[-1]
-            
-            uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-            
-            # Fallback: Try multiple possible paths for uploads directory
-            possible_dirs = [
-                uploads_dir,  # app/uploads (relative to app/)
-                "/app/uploads",  # Docker absolute path
-                os.path.join(os.getcwd(), "uploads"),  # Current working dir
-            ]
-            
-            upload_path = None
-            for dir_path in possible_dirs:
-                if os.path.exists(os.path.join(dir_path, front_filename)):
-                    upload_path = dir_path
-                    break
-            
-            if not upload_path:
-                return f"Error: Could not find uploads directory containing {front_filename}. Tried: {possible_dirs}"
-            
-            front_path = os.path.join(upload_path, front_filename)
-            side_path = os.path.join(upload_path, side_filename)
-            
-            with open(front_path, "rb") as f:
-                front_bytes = f.read()
-            with open(side_path, "rb") as f:
-                side_bytes = f.read()
+            front_bytes, side_bytes = read_images_from_filesystem(measurement)
         except Exception as e:
-            return f"Error reading images for {measurement_id}: {e}"
-
-        # 1. Extract Proxy Measurements (CNN)
-        age = measurement.age if measurement.age else 25
-        # Use user-provided height/weight as hints if available, otherwise defaults
-        height_hint = measurement.height if measurement.height else 170.0
-        weight_hint = measurement.weight if measurement.weight else 70.0
-
-        proxy = ml_service.extract_proxy_measurements(
-            front_bytes, 
-            side_bytes,
-            age=age,
-            height_hint=height_hint,
-            weight_hint=weight_hint
+            return f"Failed: {str(e)}"
+        
+        # Get demographics
+        gender = measurement.gender or 'male'
+        height_cm = measurement.height or 170.0
+        weight_kg = measurement.weight or 70.0
+        age = measurement.age or 25
+        
+        # PIPELINE STEP 1: Image -> Silhouette -> Normalization
+        try:
+            front_sil = ml_service.process_image_pipeline(front_bytes)
+            side_sil = ml_service.process_image_pipeline(side_bytes)
+        except Exception as e:
+            return f"Segmentation pipeline failed: {str(e)}"
+        
+        # PIPELINE STEP 2: CNN extraction
+        # This returns a dictionary of proxy measurements
+        cnn_measurements = ml_service.extract_proxy_measurements(
+            front_sil, side_sil, gender=gender, stature=height_cm
         )
         
-        # Update basic info
-        # We prefer the user-provided height/weight over the CNN estimate for accuracy
-        # But we store the CNN estimates in circumferences later
-        if not measurement.weight:
-            measurement.weight = proxy.get("Weight")
-        if not measurement.height:
-            measurement.height = proxy.get("Stature")
+        # PIPELINE STEP 3: Ultra V3 prediction (SVR + RF + calibration)
+        if ml_service.ultra_v3_predictor is None:
+            ml_service.ultra_v3_predictor = UltraV3Predictor()
         
-        height_cm: float = measurement.height if measurement.height is not None else 170.0
-        weight_kg: float = measurement.weight if measurement.weight is not None else 70.0
-
-        # 2. Predict Skinfolds (SVR)
-        skinfolds = ml_service.predict_skinfolds_svr(
-            height_cm=height_cm,
-            weight_kg=weight_kg,
-            age=age
-        )
-
-        # 3. Predict RF inputs (RF)
-        # Default gender to male if missing
-        gender = measurement.gender if measurement.gender else "male"
-        rf_inputs = ml_service.predict_heath_carter_inputs_rf(
-            proxy_measurements=proxy,
-            age=age,
-            gender=gender
-        )
-
-        # 4. Calculate Somatotype
-        # Combine inputs, preferring SVR for skinfolds
-        triceps = skinfolds.get("Triceps_Skinfold", rf_inputs.get("Triceps_Skinfold", 0))
-        subscapular = skinfolds.get("Subscapular_Skinfold", rf_inputs.get("Subscapular_Skinfold", 0))
-        supraspinale = skinfolds.get("Supraspinale_Skinfold", rf_inputs.get("Supraspinale_Skinfold", 0))
+        # Build input DataFrame for Ultra V3
+        ultra_input = pd.DataFrame([{
+            'height_cm': height_cm,
+            'weight_kg': weight_kg,
+            'age': age,
+            'gender': gender,
+            'waist_circumference': cnn_measurements.get('Waist_Circumference', 80),
+            'chest_circumference': cnn_measurements.get('Chest_Circumference', 95),
+            'hip_circumference': cnn_measurements.get('Hip_Circumference', 95),
+        }])
         
-        calf_skinfold = rf_inputs.get("Calf_Skinfold", 0)
-        humerus = rf_inputs.get("Humerus_Breadth", 0)
-        femur = rf_inputs.get("Femur_Breadth", 0)
-        arm_girth = rf_inputs.get("Arm_Circumference_Flexed", 0)
-        calf_girth = rf_inputs.get("Calf_Circumference", 0)
-
+        try:
+            ultra_v3_result = ml_service.ultra_v3_predictor.predict(ultra_input)
+        except Exception as e:
+            return f"UltraV3 prediction failed: {str(e)}"
+        
+        # PIPELINE STEP 4: Combine measurements (averaging overlaps)
+        final_measurements = ml_service.combine_measurements(cnn_measurements, ultra_v3_result)
+        
+        # PIPELINE STEP 5: Calculate Heath-Carter Somatotype
         somato = calculate_heath_carter(
             height_cm=height_cm,
             weight_kg=weight_kg,
-            triceps_mm=triceps,
-            subscapular_mm=subscapular,
-            supraspinale_mm=supraspinale,
-            calf_skinfold_mm=calf_skinfold,
-            humerus_breadth_cm=humerus,
-            femur_breadth_cm=femur,
-            arm_girth_cm=arm_girth,
-            calf_girth_cm=calf_girth
+            triceps_mm=final_measurements['Triceps_Skinfold'],
+            subscapular_mm=final_measurements['Subscapular_Skinfold'],
+            supraspinale_mm=final_measurements['Supraspinale_Skinfold'],
+            calf_skinfold_mm=final_measurements['Calf_Skinfold'],
+            humerus_breadth_cm=final_measurements['Humerus_Breadth'],
+            femur_breadth_cm=final_measurements['Femur_Breadth'],
+            arm_girth_cm=final_measurements['Arm_Circumference_Flexed'],
+            calf_girth_cm=final_measurements['Calf_Circumference']
         )
-
-        # Update measurement
-        measurement.somatotype_endo = somato["endomorphy"]
-        measurement.somatotype_meso = somato["mesomorphy"]
-        measurement.somatotype_ecto = somato["ectomorphy"]
+        
+        # Update DB
+        measurement.somatotype_endo = somato['endomorphy']
+        measurement.somatotype_meso = somato['mesomorphy']
+        measurement.somatotype_ecto = somato['ectomorphy']
         
         measurement.somatotype_class = classify_somatotype(
             measurement.somatotype_endo,
@@ -425,20 +318,16 @@ def process_measurement(measurement_id: int):
             measurement.somatotype_ecto
         )
         
-        # Determine body fat if possible or use a proxy
-        # (Not explicitly in requirements but useful)
-        
         # Save all intermediate data
         if not measurement.circumferences:
             measurement.circumferences = {}
             
-        measurement.circumferences.update(proxy)
-        measurement.circumferences.update(skinfolds)
-        measurement.circumferences.update(rf_inputs)
+        measurement.circumferences.update(cnn_measurements)
+        measurement.circumferences.update(final_measurements)
         measurement.circumferences.update(somato)
         
         session.add(measurement)
         session.commit()
         session.refresh(measurement)
-
+        
         return f"Successfully processed measurement {measurement_id}. Class: {measurement.somatotype_class}"
