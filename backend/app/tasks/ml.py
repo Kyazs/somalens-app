@@ -349,17 +349,25 @@ def process_measurement(measurement_id: int):
 
         # 1. Extract Proxy Measurements (CNN)
         age = measurement.age if measurement.age else 25
+        # Use user-provided height/weight as hints if available, otherwise defaults
+        height_hint = measurement.height if measurement.height else 170.0
+        weight_hint = measurement.weight if measurement.weight else 70.0
+
         proxy = ml_service.extract_proxy_measurements(
             front_bytes, 
             side_bytes,
             age=age,
-            height_hint=170.0,
-            weight_hint=70.0
+            height_hint=height_hint,
+            weight_hint=weight_hint
         )
         
         # Update basic info
-        measurement.weight = proxy.get("Weight")
-        measurement.height = proxy.get("Stature")
+        # We prefer the user-provided height/weight over the CNN estimate for accuracy
+        # But we store the CNN estimates in circumferences later
+        if not measurement.weight:
+            measurement.weight = proxy.get("Weight")
+        if not measurement.height:
+            measurement.height = proxy.get("Stature")
         
         height_cm: float = measurement.height if measurement.height is not None else 170.0
         weight_kg: float = measurement.weight if measurement.weight is not None else 70.0

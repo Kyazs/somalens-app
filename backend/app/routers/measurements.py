@@ -24,16 +24,21 @@ async def analyze_measurements(
     side_image: UploadFile = File(...),
     age: int = Form(...),
     gender: str = Form(...),
-    user_height_cm: Optional[float] = Form(None),
+    height: float = Form(...),
+    weight: float = Form(...),
 ):
     """
     Analyze body measurements from front and side images.
     """
     # Validation
     if gender.lower() not in ["male", "female"]:
-        raise HTTPException(status_code=400, detail="Gender must be 'male' or 'female'")
-    if age < 1 or age > 120:
-        raise HTTPException(status_code=400, detail="Age must be between 1 and 120")
+        raise HTTPException(status_code=422, detail="Gender must be 'male' or 'female'")
+    if age < 10 or age > 100:
+        raise HTTPException(status_code=422, detail="Age must be between 10 and 100")
+    if height < 100 or height > 250:
+        raise HTTPException(status_code=422, detail="Height must be between 100 and 250 cm")
+    if weight < 30 or weight > 200:
+        raise HTTPException(status_code=422, detail="Weight must be between 30 and 200 kg")
 
     # Save images
     # We use UUID to prevent filename collisions
@@ -63,7 +68,8 @@ async def analyze_measurements(
         side_image_url=side_url,
         age=age,
         gender=gender,
-        height=user_height_cm,
+        height=height,
+        weight=weight,
         # status="pending" # Implicit status based on missing results
     )
     session.add(measurement)
