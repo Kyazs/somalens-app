@@ -83,23 +83,21 @@ class MLService:
 
         self.is_loaded = True
 
-    def preprocess_image(self, image_bytes: bytes) -> np.ndarray:
-        img = Image.open(io.BytesIO(image_bytes))
-        img = img.convert("L")
-        img = img.resize((224, 224), Image.Resampling.LANCZOS)
-        arr = np.array(img, dtype=np.float32) / 255.0
-        arr = np.expand_dims(arr, axis=-1)
-        return arr
-
     def extract_proxy_measurements(
-        self, front_image: bytes, side_image: bytes, age: int = 25, height_hint: float = 170.0, weight_hint: float = 70.0
+        self, 
+        front_silhouette: np.ndarray,
+        side_silhouette: np.ndarray,
+        gender: str,
+        stature: float
     ) -> Dict[str, float]:
         """
-        Extract proxy measurements from front and side images using CNN.
+        Extract proxy measurements from front and side silhouettes using CNN.
         
         Args:
-            front_image: Front pose image bytes
-            side_image: Side pose image bytes
+            front_silhouette: (224, 224, 1) normalized silhouette
+            side_silhouette: (224, 224, 1) normalized silhouette
+            gender: 'male' or 'female'
+            stature: Height in cm
             
         Returns:
             Dictionary with 9 proxy measurements
@@ -107,7 +105,7 @@ class MLService:
         if self.cnn_model is None:
             # Return mock data if CNN not loaded
             return {
-                "Stature": 170.0,
+                "Stature": stature,
                 "Weight": 70.0,
                 "Chest_Circumference": 95.0,
                 "Hip_Circumference": 95.0,
@@ -118,13 +116,16 @@ class MLService:
                 "Knee_Height": 50.0,
             }
 
-        # Preprocess images
-        front_arr = self.preprocess_image(front_image)
-        side_arr = self.preprocess_image(side_image)
-
-        numca_input = np.array([[age, height_hint, weight_hint]], dtype=np.float32)
-        front_input = np.expand_dims(front_arr, axis=0)
-        side_input = np.expand_dims(side_arr, axis=0)
+        # Gender one-hot: female=[1,0], male=[0,1]
+        gender_female = 1.0 if gender.lower() == 'female' else 0.0
+        gender_male = 1.0 if gender.lower() == 'male' else 0.0
+        stature_scaled = stature / 200.0
+        
+        numca_input = np.array([[gender_female, gender_male, stature_scaled]], dtype=np.float32)
+        
+        # Silhouettes are already (224, 224, 1)
+        front_input = np.expand_dims(front_silhouette, axis=0)
+        side_input = np.expand_dims(side_silhouette, axis=0)
 
         predictions = self.cnn_model.predict([numca_input, front_input, side_input], verbose=0)
         predictions = np.real(predictions).astype(np.float64)
