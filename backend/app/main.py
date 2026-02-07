@@ -1,12 +1,19 @@
 from contextlib import asynccontextmanager
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import os
+import traceback
+import logging
 
 from app.config import settings
 from app.api.v1.api import api_router
 from app.database import create_db_and_tables
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -43,6 +50,16 @@ app.add_middleware(
 os.makedirs("uploads", exist_ok=True)
 os.makedirs("data", exist_ok=True)
 app.mount("/static", StaticFiles(directory="uploads"), name="static")
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled exception: {type(exc).__name__}: {exc}")
+    logger.error(traceback.format_exc())
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {type(exc).__name__}: {str(exc)}"}
+    )
+
 
 app.include_router(api_router, prefix="/api/v1")
 
