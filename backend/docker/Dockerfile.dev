@@ -14,8 +14,8 @@ WORKDIR /app
 # Copy dependency files
 COPY pyproject.toml ./
 
-# Install dependencies using uv
-RUN uv pip install --system -e .
+# Install dependencies using uv (with PyTorch CPU for ML pipeline)
+RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -e .
 
 # Copy application code
 COPY app/ ./app/

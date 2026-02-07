@@ -9,6 +9,7 @@ dependencies = [
     "sqlmodel>=0.0.22",
     "alembic>=1.14.0",
     "psycopg2-binary>=2.9.9",
+    "asyncpg>=0.29.0",
     "celery[redis]>=5.4.0",
     "redis>=5.2.0",
     "pyjwt>=2.10.0",
@@ -25,6 +26,8 @@ dependencies = [
     "numpy==1.26.3",
     "torch>=2.2.0",
     "torchvision>=0.17.0",
+    "pandas>=2.0.0",
+    "opencv-python>=4.9.0",
 ]
 
 [build-system]

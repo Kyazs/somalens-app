@@ -2,38 +2,38 @@
 
 # Development
 dev:
-	docker-compose -f docker/docker-compose.dev.yml up
+	docker compose -f docker/docker-compose.dev.yml up
 
 # Production
 prod:
-	docker-compose -f docker/docker-compose.prod.yml up -d
+	docker compose -f docker/docker-compose.prod.yml up -d
 
 # Database migrations
 migrate:
-	docker-compose -f docker/docker-compose.dev.yml exec api alembic upgrade head
+	docker compose -f docker/docker-compose.dev.yml exec api alembic upgrade head
 
 migrate-create:
 	@read -p "Migration name: " name; \
-	docker-compose -f docker/docker-compose.dev.yml exec api alembic revision --autogenerate -m "$$name"
+	docker compose -f docker/docker-compose.dev.yml exec api alembic revision --autogenerate -m "$$name"
 
 # Docker utilities
 shell:
-	docker-compose -f docker/docker-compose.dev.yml exec api bash
+	docker compose -f docker/docker-compose.dev.yml exec api bash
 
 logs:
-	docker-compose -f docker/docker-compose.dev.yml logs -f api
+	docker compose -f docker/docker-compose.dev.yml logs -f api
 
 celery-logs:
-	docker-compose -f docker/docker-compose.dev.yml logs -f worker
+	docker compose -f docker/docker-compose.dev.yml logs -f celery_worker
 
 redis-cli:
-	docker-compose -f docker/docker-compose.dev.yml exec redis redis-cli
+	docker compose -f docker/docker-compose.dev.yml exec redis redis-cli
 
 stop:
-	docker-compose -f docker/docker-compose.dev.yml down
+	docker compose -f docker/docker-compose.dev.yml down
 
 clean:
-	docker-compose -f docker/docker-compose.dev.yml down -v
+	docker compose -f docker/docker-compose.dev.yml down -v
 	rm -rf data/
 
 help:
