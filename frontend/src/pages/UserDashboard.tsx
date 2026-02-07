@@ -28,28 +28,23 @@ export function UserDashboard() {
   }, []);
 
   const handleViewDetails = (session: MeasurementSession) => {
-    if (!session.somatotype_result) return;
+    if (!session.somatotype_class) return;
 
-    // Transform MeasurementSession to AnalysisResponse format for ResultsPage
-    // TODO: Centralize this transformation logic as it's shared with HistoryPage
-    const proxy_measurements: Record<string, number> = {};
-    const heath_carter_inputs: Record<string, number> = {};
-
-    session.body_measurements.forEach(m => {
-      proxy_measurements[m.measurement_type] = m.value;
-      heath_carter_inputs[m.measurement_type] = m.value;
-    });
-
+    const circumferences = session.circumferences || {};
+    
     const result: AnalysisResponse = {
-      proxy_measurements,
-      heath_carter_inputs,
+      id: session.id,
+      proxy_measurements: circumferences,
+      heath_carter_inputs: circumferences,
       somatotype: {
-        endomorphy: session.somatotype_result.endomorphy,
-        mesomorphy: session.somatotype_result.mesomorphy,
-        ectomorphy: session.somatotype_result.ectomorphy,
-        classification: session.somatotype_result.classification,
-        hwr: 0
-      }
+        endomorphy: session.somatotype_endo ?? 0,
+        mesomorphy: session.somatotype_meso ?? 0,
+        ectomorphy: session.somatotype_ecto ?? 0,
+        classification: session.somatotype_class,
+        hwr: circumferences.hwr ?? 0
+      },
+      front_image_url: session.front_image_url,
+      side_image_url: session.side_image_url
     };
 
     navigate('/results', { state: { result } });
@@ -169,9 +164,9 @@ export function UserDashboard() {
                             })}
                           </td>
                           <td className="px-6 py-4">
-                            {session.somatotype_result ? (
+                            {session.somatotype_class ? (
                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                  {session.somatotype_result.classification}
+                                   {session.somatotype_class}
                                </span>
                             ) : (
                               <span className="text-white/40 text-xs">Processing...</span>
@@ -192,10 +187,10 @@ export function UserDashboard() {
             <div className="space-y-6">
                 <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border border-emerald-500/20 rounded-3xl p-6">
                     <h3 className="text-lg font-bold text-white mb-2">Latest Status</h3>
-                    {history[0]?.somatotype_result ? (
+                    {history[0]?.somatotype_class ? (
                         <>
                             <div className="text-4xl font-black text-emerald-400 mb-1">
-                                {history[0].somatotype_result.classification}
+                                {history[0].somatotype_class}
                             </div>
                             <div className="text-white/60 text-sm mb-4">
                                 Last analysis on {new Date(history[0].created_at).toLocaleDateString()}
@@ -203,15 +198,15 @@ export function UserDashboard() {
                             <div className="grid grid-cols-3 gap-2 text-center">
                                 <div className="bg-black/20 rounded-lg p-2">
                                     <div className="text-xs text-white/40 mb-1">Endo</div>
-                                    <div className="font-bold">{history[0].somatotype_result.endomorphy.toFixed(1)}</div>
+                                    <div className="font-bold">{(history[0].somatotype_endo ?? 0).toFixed(1)}</div>
                                 </div>
                                 <div className="bg-black/20 rounded-lg p-2">
                                     <div className="text-xs text-white/40 mb-1">Meso</div>
-                                    <div className="font-bold">{history[0].somatotype_result.mesomorphy.toFixed(1)}</div>
+                                    <div className="font-bold">{(history[0].somatotype_meso ?? 0).toFixed(1)}</div>
                                 </div>
                                 <div className="bg-black/20 rounded-lg p-2">
                                     <div className="text-xs text-white/40 mb-1">Ecto</div>
-                                    <div className="font-bold">{history[0].somatotype_result.ectomorphy.toFixed(1)}</div>
+                                    <div className="font-bold">{(history[0].somatotype_ecto ?? 0).toFixed(1)}</div>
                                 </div>
                             </div>
                         </>

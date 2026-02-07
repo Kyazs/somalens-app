@@ -3,13 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import type { AnalysisResponse } from '../services/api';
 import type { MeasurementSession } from '../types/pose';
+import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS, ADDITIONAL_GIRTH_KEYS } from '../types/pose';
 import ProgressChart from '../components/ProgressChart';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export function HistoryPage() {
   const navigate = useNavigate();
   const [history, setHistory] = useState<MeasurementSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedSession, setSelectedSession] = useState<MeasurementSession | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -28,36 +32,43 @@ export function HistoryPage() {
   }, []);
 
   const handleViewDetails = (session: MeasurementSession) => {
-    if (!session.somatotype_result) return;
+    if (!session.somatotype_class) return;
 
-    // Transform MeasurementSession to AnalysisResponse format for ResultsPage
-    const proxy_measurements: Record<string, number> = {};
-    const heath_carter_inputs: Record<string, number> = {};
-
-    session.body_measurements.forEach(m => {
-      // Backend stores keys as sent, so they should match (e.g., 'Stature', 'Weight')
-      proxy_measurements[m.measurement_type] = m.value;
-      
-      // If it's a skinfold or bone breadth, it might be heath_carter
-      // But ResultsPage checks specific keys in specific arrays.
-      // We can safely put everything in proxy_measurements if keys are unique enough
-      // or duplicate them.
-      heath_carter_inputs[m.measurement_type] = m.value;
-    });
+    const circumferences = session.circumferences || {};
+    
+    const proxy_measurements: Record<string, number> = {
+      ...circumferences,
+      Stature: session.height || 0,
+      Weight: session.weight || 0,
+      Body_Fat_Percentage: session.body_fat_percentage || 0,
+    };
 
     const result: AnalysisResponse = {
+      id: session.id,
       proxy_measurements,
-      heath_carter_inputs,
+      heath_carter_inputs: circumferences,
       somatotype: {
-        endomorphy: session.somatotype_result.endomorphy,
-        mesomorphy: session.somatotype_result.mesomorphy,
-        ectomorphy: session.somatotype_result.ectomorphy,
-        classification: session.somatotype_result.classification,
-        hwr: 0 // Not stored/calculated in backend yet
-      }
+        endomorphy: session.somatotype_endo || 0,
+        mesomorphy: session.somatotype_meso || 0,
+        ectomorphy: session.somatotype_ecto || 0,
+        classification: session.somatotype_class,
+        hwr: circumferences.hwr || 0
+      },
+      front_image_url: session.front_image_url,
+      side_image_url: session.side_image_url,
     };
 
     navigate('/results', { state: { result } });
+  };
+
+  const getImageUrl = (path: string | null) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${API_URL.replace('/api/v1', '')}${path}`;
+  };
+
+  const formatKey = (key: string) => {
+    return key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
   };
 
   if (loading) {
@@ -164,25 +175,32 @@ export function HistoryPage() {
                           })}
                         </td>
                         <td className="px-6 py-4">
-                          {session.somatotype_result ? (
+                          {session.somatotype_class ? (
                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                {session.somatotype_result.classification}
+                                {session.somatotype_class}
                              </span>
                           ) : (
                             <span className="text-white/40 text-xs">Processing...</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-sm text-white/70 font-mono">
-                          {session.somatotype_result ? (
-                            `${session.somatotype_result.endomorphy.toFixed(1)} - ${session.somatotype_result.mesomorphy.toFixed(1)} - ${session.somatotype_result.ectomorphy.toFixed(1)}`
+                          {session.somatotype_endo !== null ? (
+                            `${session.somatotype_endo.toFixed(1)} - ${session.somatotype_meso?.toFixed(1)} - ${session.somatotype_ecto?.toFixed(1)}`
                           ) : '-'}
                         </td>
-                        <td className="px-6 py-4 text-right">
+                        <td className="px-6 py-4 text-right space-x-2">
+                          <button
+                            onClick={() => setSelectedSession(selectedSession?.id === session.id ? null : session)}
+                            className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors"
+                          >
+                            {selectedSession?.id === session.id ? 'Hide Details' : 'Details'}
+                          </button>
                           <button
                             onClick={() => handleViewDetails(session)}
-                            className="text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors opacity-0 group-hover:opacity-100"
+                            disabled={!session.somatotype_class}
+                            className="text-sm font-bold text-emerald-400 hover:text-emerald-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            View Report →
+                            Full Report →
                           </button>
                         </td>
                       </tr>
@@ -191,6 +209,138 @@ export function HistoryPage() {
                 </table>
               </div>
             </div>
+
+            {selectedSession && (
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-6 md:p-8 backdrop-blur-sm">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"/>
+                    Measurement Details - {new Date(selectedSession.created_at).toLocaleDateString()}
+                  </h3>
+                  <button
+                    onClick={() => setSelectedSession(null)}
+                    className="text-white/60 hover:text-white"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <div className="lg:col-span-1 space-y-4">
+                    <h4 className="text-sm font-bold text-white/70 uppercase tracking-wider">Images</h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      {selectedSession.front_image_url && (
+                        <div className="space-y-2">
+                          <span className="text-xs text-white/50">Front View</span>
+                          <img
+                            src={getImageUrl(selectedSession.front_image_url) || ''}
+                            alt="Front view"
+                            className="w-full aspect-[3/4] object-cover rounded-xl border border-white/10"
+                          />
+                        </div>
+                      )}
+                      {selectedSession.side_image_url && (
+                        <div className="space-y-2">
+                          <span className="text-xs text-white/50">Side View</span>
+                          <img
+                            src={getImageUrl(selectedSession.side_image_url) || ''}
+                            alt="Side view"
+                            className="w-full aspect-[3/4] object-cover rounded-xl border border-white/10"
+                          />
+                        </div>
+                      )}
+                      {!selectedSession.front_image_url && !selectedSession.side_image_url && (
+                        <div className="col-span-2 text-white/40 text-sm p-4 bg-white/5 rounded-xl text-center">
+                          No images available
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                      <h4 className="text-sm font-bold text-rose-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/>
+                        Skinfolds (mm)
+                      </h4>
+                      <div className="space-y-2">
+                        {SKINFOLD_KEYS.map(key => {
+                          const value = selectedSession.circumferences?.[key];
+                          return (
+                            <div key={key} className="flex justify-between text-sm">
+                              <span className="text-white/60">{formatKey(key)}</span>
+                              <span className="text-white font-mono">
+                                {value !== undefined ? value.toFixed(1) : '-'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                      <h4 className="text-sm font-bold text-blue-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
+                        Breadths (cm)
+                      </h4>
+                      <div className="space-y-2">
+                        {BREADTH_KEYS.map(key => {
+                          const value = selectedSession.circumferences?.[key];
+                          return (
+                            <div key={key} className="flex justify-between text-sm">
+                              <span className="text-white/60">{formatKey(key)}</span>
+                              <span className="text-white font-mono">
+                                {value !== undefined ? value.toFixed(1) : '-'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                      <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500"/>
+                        Girths (cm)
+                      </h4>
+                      <div className="space-y-2">
+                        {GIRTH_KEYS.map(key => {
+                          const value = selectedSession.circumferences?.[key];
+                          return (
+                            <div key={key} className="flex justify-between text-sm">
+                              <span className="text-white/60">{formatKey(key)}</span>
+                              <span className="text-white font-mono">
+                                {value !== undefined ? value.toFixed(1) : '-'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                      <h4 className="text-sm font-bold text-amber-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500"/>
+                        Additional Girths (cm)
+                      </h4>
+                      <div className="space-y-2">
+                        {ADDITIONAL_GIRTH_KEYS.map(key => {
+                          const value = selectedSession.circumferences?.[key];
+                          return (
+                            <div key={key} className="flex justify-between text-sm">
+                              <span className="text-white/60">{formatKey(key)}</span>
+                              <span className="text-white font-mono">
+                                {value !== undefined ? value.toFixed(1) : '-'}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </main>

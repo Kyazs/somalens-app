@@ -1,19 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import { api } from '../services/api';
 import type { AnalysisResponse } from '../services/api';
 import SomatotypeChart from '../components/SomatotypeChart';
 import { useCaptureStore } from '../stores/captureStore';
+import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS, ADDITIONAL_GIRTH_KEYS } from '../types/pose';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export function ResultsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const result = location.state?.result as AnalysisResponse | undefined;
   const { reset } = useCaptureStore();
-  
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
     if (!result) {
@@ -23,41 +21,26 @@ export function ResultsPage() {
 
   if (!result) return null;
 
-  const { somatotype, proxy_measurements } = result;
+  const { somatotype, proxy_measurements, front_image_url, side_image_url } = result;
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    setSaveError(null);
-    try {
-      await api.saveMeasurement({
-        id: crypto.randomUUID(), 
-        date: new Date().toISOString(),
-        ...result
-      });
-      setSaveSuccess(true);
-    } catch (err) {
-      console.error('Failed to save:', err);
-      setSaveError('Failed to save to history');
-    } finally {
-      setIsSaving(false);
-    }
+  const getImageUrl = (path: string | null | undefined) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    return `${API_URL.replace('/api/v1', '')}${path}`;
+  };
+
+  const formatKey = (key: string) => {
+    return key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
   };
 
   const mainMeasurements = [
-    { label: 'Height', value: `${proxy_measurements.Stature?.toFixed(1)} cm` },
-
-    { label: 'Weight', value: `${proxy_measurements.Weight?.toFixed(1)} kg` },
-    { label: 'Body Fat %', value: `${proxy_measurements.Body_Fat_Percentage?.toFixed(1)}%` },
+    { label: 'Height', value: `${proxy_measurements.Stature?.toFixed(1) || '-'} cm` },
+    { label: 'Weight', value: `${proxy_measurements.Weight?.toFixed(1) || '-'} kg` },
+    { label: 'Body Fat %', value: `${proxy_measurements.Body_Fat_Percentage?.toFixed(1) || '-'}%` },
   ];
 
-  const girths = [
-    { label: 'Chest', value: `${proxy_measurements.Chest_Girth?.toFixed(1)} cm` },
-    { label: 'Waist', value: `${proxy_measurements.Waist_Girth?.toFixed(1)} cm` },
-    { label: 'Hip', value: `${proxy_measurements.Hip_Girth?.toFixed(1)} cm` },
-    { label: 'Thigh', value: `${proxy_measurements.Thigh_Girth?.toFixed(1)} cm` },
-    { label: 'Bicep', value: `${proxy_measurements.Arm_Circumference_Flexed?.toFixed(1) || 0} cm` },
-    { label: 'Calf', value: `${proxy_measurements.Calf_Circumference?.toFixed(1) || 0} cm` },
-  ];
+  const frontImg = getImageUrl(front_image_url);
+  const sideImg = getImageUrl(side_image_url);
 
   return (
     <div className="min-h-screen bg-black text-white p-6 pb-20">
@@ -107,6 +90,37 @@ export function ResultsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {(frontImg || sideImg) && (
+              <div className="bg-white/5 border border-white/10 rounded-3xl p-8 md:col-span-2">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500"/>
+                  Your Photos
+                </h3>
+                <div className="grid grid-cols-2 gap-6 max-w-md mx-auto">
+                  {frontImg && (
+                    <div className="space-y-2">
+                      <span className="text-xs text-white/50 uppercase tracking-wider">Front View</span>
+                      <img
+                        src={frontImg}
+                        alt="Front view"
+                        className="w-full aspect-[3/4] object-cover rounded-xl border border-white/10"
+                      />
+                    </div>
+                  )}
+                  {sideImg && (
+                    <div className="space-y-2">
+                      <span className="text-xs text-white/50 uppercase tracking-wider">Side View</span>
+                      <img
+                        src={sideImg}
+                        alt="Side view"
+                        className="w-full aspect-[3/4] object-cover rounded-xl border border-white/10"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
                 <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
@@ -123,47 +137,101 @@ export function ResultsPage() {
             </div>
 
             <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
-                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500"/>
-                    Girths & Circumferences
+                <h3 className="text-xl font-bold mb-6 fcdlex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/>
+                    Skinfolds (mm)
                 </h3>
                 <div className="space-y-4">
-                     {girths.map((m) => (
-                        <div key={m.label} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
-                            <span className="text-white/60">{m.label}</span>
-                            <span className="text-lg font-medium tabular-nums text-white/90">{m.value}</span>
-                        </div>
-                    ))}
+                    {SKINFOLD_KEYS.map((key) => {
+                        const value = proxy_measurements[key];
+                        return (
+                          <div key={key} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
+                            <span className="text-white/60">{formatKey(key)}</span>
+                            <span className="text-lg font-medium tabular-nums text-white/90">
+                              {value !== undefined ? value.toFixed(1) : '-'}
+                            </span>
+                          </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
+                    Breadths (cm)
+                </h3>
+                <div className="space-y-4">
+                    {BREADTH_KEYS.map((key) => {
+                        const value = proxy_measurements[key];
+                        return (
+                          <div key={key} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
+                            <span className="text-white/60">{formatKey(key)}</span>
+                            <span className="text-lg font-medium tabular-nums text-white/90">
+                              {value !== undefined ? value.toFixed(1) : '-'}
+                            </span>
+                          </div>
+                        );
+                    })}
+                </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-purple-500"/>
+                    Girths (cm)
+                </h3>
+                <div className="space-y-4">
+                    {GIRTH_KEYS.map((key) => {
+                        const value = proxy_measurements[key];
+                        return (
+                          <div key={key} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
+                            <span className="text-white/60">{formatKey(key)}</span>
+                            <span className="text-lg font-medium tabular-nums text-white/90">
+                              {value !== undefined ? value.toFixed(1) : '-'}
+                            </span>
+                          </div>
+                        );
+                    })}\
+                </div>
+            </div>
+
+            <div className="bg-white/5 border border-white/10 rounded-3xl p-8">
+                <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"/>
+                    Additional Girths (cm)
+                </h3>
+                <div className="space-y-4">
+                    {ADDITIONAL_GIRTH_KEYS.map((key) => {
+                        const value = proxy_measurements[key];
+                        return (
+                          <div key={key} className="flex justify-between items-center border-b border-white/5 pb-2 last:border-0">
+                            <span className="text-white/60">{formatKey(key)}</span>
+                            <span className="text-lg font-medium tabular-nums text-white/90">
+                              {value !== undefined ? value.toFixed(1) : '-'}
+                            </span>
+                          </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 justify-center items-center pt-8">
-             <button
-              onClick={handleSave}
-              disabled={isSaving || saveSuccess}
-              className={`
-                px-8 py-4 rounded-xl font-bold text-lg transition-all w-full md:w-auto
-                ${saveSuccess 
-                  ? 'bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 cursor-default' 
-                  : 'bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.3)]'}
-                disabled:opacity-50 disabled:hover:scale-100
-              `}
-            >
-              {isSaving ? 'Saving...' : saveSuccess ? 'Saved to History' : 'Save Results'}
-            </button>
-
             <Link 
                 to="/capture" 
                 onClick={reset}
-                className="group relative px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all w-full md:w-auto text-center"
+                className="group relative px-8 py-4 bg-emerald-500 text-black hover:bg-emerald-400 hover:scale-105 shadow-[0_0_20px_rgba(16,185,129,0.3)] font-bold rounded-xl transition-all w-full md:w-auto text-center"
             >
                 Start New Scan
             </Link>
+            <Link 
+                to="/history" 
+                className="group relative px-8 py-4 bg-white/10 hover:bg-white/20 text-white font-bold rounded-xl transition-all w-full md:w-auto text-center"
+            >
+                View History
+            </Link>
         </div>
-        {saveError && (
-            <p className="text-rose-400 text-center mt-2">{saveError}</p>
-        )}
 
       </main>
     </div>

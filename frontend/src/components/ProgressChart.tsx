@@ -72,17 +72,14 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
     return sessions
       .map(session => {
         const date = new Date(session.created_at);
-        const weightMeasurement = session.body_measurements.find(
-          m => m.measurement_type.toLowerCase() === 'weight'
-        );
         
         return {
           date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(date),
           timestamp: date.getTime(),
-          endomorphy: session.somatotype_result?.endomorphy,
-          mesomorphy: session.somatotype_result?.mesomorphy,
-          ectomorphy: session.somatotype_result?.ectomorphy,
-          weight: weightMeasurement ? weightMeasurement.value : undefined
+          endomorphy: session.somatotype_endo ?? undefined,
+          mesomorphy: session.somatotype_meso ?? undefined,
+          ectomorphy: session.somatotype_ecto ?? undefined,
+          weight: session.weight ?? undefined
         } as ChartDataPoint;
       })
       .sort((a, b) => a.timestamp - b.timestamp);

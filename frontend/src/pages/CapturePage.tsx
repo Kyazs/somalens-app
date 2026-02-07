@@ -112,7 +112,7 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
     );
 };
 
-const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
+const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: () => void }) => {
   const { userData, setUserData } = useCaptureStore();
   const [error, setError] = useState<string | null>(null);
   
@@ -143,6 +143,9 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md space-y-8">
+        {onBack && (
+          <Link to="/" className="text-white/60 hover:text-white mb-4 inline-block">← Back</Link>
+        )}
         <div className="text-center">
           <div className="w-16 h-16 bg-emerald-500 rounded-full mx-auto mb-6 flex items-center justify-center text-2xl">📋</div>
           <h1 className="text-3xl font-bold">Profile Setup</h1>
@@ -577,7 +580,7 @@ export function CapturePage() {
   }
 
   if (capturePhase === 'setup') {
-      return <SetupForm onComplete={() => setCapturePhase('method')} />;
+      return <SetupForm onComplete={() => setCapturePhase('method')} onBack={() => {}} />;
   }
 
   if (capturePhase === 'method') {

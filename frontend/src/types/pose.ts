@@ -36,33 +36,55 @@ export const POSE_LANDMARKS = {
   RIGHT_ANKLE: 28,
 } as const;
 
-export interface BodyMeasurement {
-  id: string;
-  session_id: string;
-  measurement_type: string;
-  value: number;
-  unit: string;
-  confidence?: number;
-  created_at: string;
-}
-
-export interface SomatotypeResult {
-  id: string;
-  session_id: string;
-  endomorphy: number;
-  mesomorphy: number;
-  ectomorphy: number;
-  classification: string;
-  created_at: string;
-}
-
+/**
+ * Backend Measurement model - matches what the API returns
+ */
 export interface MeasurementSession {
-  id: string;
-  user_id: string;
-  status: string;
-  front_image_path?: string;
-  side_image_path?: string;
+  id: number;
+  user_id: number;
+  front_image_url: string | null;
+  side_image_url: string | null;
+  height: number | null;
+  weight: number | null;
+  gender: string | null;
+  age: number | null;
+  somatotype_endo: number | null;
+  somatotype_meso: number | null;
+  somatotype_ecto: number | null;
+  somatotype_class: string | null;
+  body_fat_percentage: number | null;
+  circumferences: Record<string, number> | null;
   created_at: string;
-  body_measurements: BodyMeasurement[];
-  somatotype_result?: SomatotypeResult;
 }
+
+/**
+ * Heath-Carter measurement keys stored in circumferences
+ */
+export const SKINFOLD_KEYS = [
+  'Triceps_Skinfold',
+  'Subscapular_Skinfold',
+  'Supraspinale_Skinfold',
+  'Calf_Skinfold',
+] as const;
+
+export const BREADTH_KEYS = [
+  'Humerus_Breadth',
+  'Femur_Breadth',
+] as const;
+
+export const GIRTH_KEYS = [
+  'Arm_Circumference_Flexed',
+  'Calf_Circumference',
+] as const;
+
+export const ADDITIONAL_GIRTH_KEYS = [
+  'Chest_Circumference',
+  'Waist_Circumference',
+  'Hip_Circumference',
+  'Thigh_Circumference',
+] as const;
+
+export type SkinfoldKey = typeof SKINFOLD_KEYS[number];
+export type BreadthKey = typeof BREADTH_KEYS[number];
+export type GirthKey = typeof GIRTH_KEYS[number];
+export type AdditionalGirthKey = typeof ADDITIONAL_GIRTH_KEYS[number];

@@ -1,32 +1,35 @@
 import { useCallback } from 'react';
 
 interface UseImageCaptureResult {
-  captureFrame: (video: HTMLVideoElement) => Promise<Blob>;
+  captureFrame: (video: HTMLVideoElement, rotation?: number) => Promise<Blob>;
   createPreview: (blob: Blob) => string;
   revokePreview: (url: string) => void;
 }
 
 export function useImageCapture(): UseImageCaptureResult {
-  const captureFrame = useCallback(async (video: HTMLVideoElement): Promise<Blob> => {
+  const captureFrame = useCallback(async (video: HTMLVideoElement, rotation: number = 0): Promise<Blob> => {
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    const isRotated90or270 = rotation === 90 || rotation === 270;
+    
+    canvas.width = isRotated90or270 ? video.videoHeight : video.videoWidth;
+    canvas.height = isRotated90or270 ? video.videoWidth : video.videoHeight;
     
     const ctx = canvas.getContext('2d');
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
 
-    // Draw the current video frame to the canvas
-    // We flip horizontally if the video is mirrored (user facing camera usually is)
-    // But for analysis we might want the raw image. 
-    // Let's assume we capture exactly what is on the video element.
-    // If the video element is styled with transform: scaleX(-1), the capture will NOT be flipped by default drawImage.
-    // We should probably capture it "as is" (unmirrored) for analysis, 
-    // but the preview might need to be mirrored if the user expects a mirror.
-    // However, for medical/posture analysis, a non-mirrored image (true view) is usually better.
-    // Let's stick to standard drawImage.
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    if (rotation !== 0) {
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((rotation * Math.PI) / 180);
+      if (rotation === 90 || rotation === 270) {
+        ctx.drawImage(video, -video.videoWidth / 2, -video.videoHeight / 2);
+      } else {
+        ctx.drawImage(video, -canvas.width / 2, -canvas.height / 2);
+      }
+    } else {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    }
 
     return new Promise((resolve, reject) => {
       canvas.toBlob(

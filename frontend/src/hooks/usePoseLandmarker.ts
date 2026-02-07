@@ -9,12 +9,14 @@ import {
   type PoseLandmarkerResult,
 } from '@mediapipe/tasks-vision';
 
+type PoseInputElement = HTMLVideoElement | HTMLCanvasElement;
+
 interface UsePoseLandmarkerResult {
   landmarker: PoseLandmarker | null;
   isLoading: boolean;
   error: string | null;
   isReady: boolean;
-  detectPose: (video: HTMLVideoElement, timestamp: number) => PoseLandmarkerResult | null;
+  detectPose: (input: PoseInputElement, timestamp: number) => PoseLandmarkerResult | null;
 }
 
 const MODEL_URL =
@@ -74,13 +76,13 @@ export function usePoseLandmarker(): UsePoseLandmarkerResult {
   }, []);
 
   const detectPose = useCallback(
-    (video: HTMLVideoElement, timestamp: number): PoseLandmarkerResult | null => {
+    (input: PoseInputElement, timestamp: number): PoseLandmarkerResult | null => {
       if (!landmarkerRef.current || !isReady) {
         return null;
       }
 
       try {
-        return landmarkerRef.current.detectForVideo(video, timestamp);
+        return landmarkerRef.current.detectForVideo(input as HTMLVideoElement, timestamp);
       } catch (err) {
         console.error('Pose detection error:', err);
         return null;

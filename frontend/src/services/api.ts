@@ -27,6 +27,8 @@ export interface AnalysisResponse {
     classification: string;
     hwr: number;
   };
+  front_image_url?: string | null;
+  side_image_url?: string | null;
 }
 
 export interface MeasurementResponse {
@@ -42,16 +44,8 @@ export interface MeasurementResponse {
   somatotype_endo: number | null;
   somatotype_meso: number | null;
   somatotype_ecto: number | null;
-  chest_circumference: number | null;
-  waist_circumference: number | null;
-  hip_circumference: number | null;
-  arm_circumference: number | null;
-  thigh_circumference: number | null;
-  calf_circumference: number | null;
-  skinfold_triceps: number | null;
-  skinfold_subscapular: number | null;
-  skinfold_supraspinale: number | null;
-  skinfold_calf: number | null;
+  body_fat_percentage: number | null;
+  circumferences: Record<string, number> | null;
   created_at: string;
 }
 
@@ -90,8 +84,10 @@ axiosInstance.interceptors.response.use(
             throw new Error('No refresh token');
         }
 
-        const response = await axios.post(`${API_URL}/auth/refresh`, {
-          refresh_token: refreshToken
+        const response = await axios.post(`${API_URL}/auth/refresh`, {}, {
+          headers: {
+            'Authorization': `Bearer ${refreshToken}`
+          }
         });
         
         const { access_token, refresh_token: new_refresh_token } = response.data;
@@ -113,25 +109,43 @@ axiosInstance.interceptors.response.use(
   }
 );
 
+function extractErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error) && error.response?.data?.detail) {
+    return error.response.data.detail;
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return fallback;
+}
+
 export const api = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
-    const response = await axiosInstance.post<LoginResponse>('/auth/login', {
-      email,
-      password,
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.post<LoginResponse>('/auth/login', {
+        email,
+        password,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Failed to sign in. Please try again.'));
+    }
   },
 
   register: async (email: string, password: string): Promise<UserResponse> => {
-    const response = await axiosInstance.post<UserResponse>('/auth/register', {
-      email,
-      password,
-    });
-    return response.data;
+    try {
+      const response = await axiosInstance.post<UserResponse>('/users', {
+        email,
+        password,
+      });
+      return response.data;
+    } catch (error) {
+      throw new Error(extractErrorMessage(error, 'Failed to create account. Please try again.'));
+    }
   },
 
   getMe: async (): Promise<UserResponse> => {
-    const response = await axiosInstance.get<UserResponse>('/auth/me');
+    const response = await axiosInstance.get<UserResponse>('/users/me');
     return response.data;
   },
 
@@ -148,8 +162,8 @@ export const api = {
     formData.append('side_image', sideImage, 'side.jpg');
     formData.append('age', age.toString());
     formData.append('gender', gender);
-    formData.append('user_height_cm', heightCm.toString());
-    formData.append('user_weight_kg', weightKg.toString());
+    formData.append('height', heightCm.toString());
+    formData.append('weight', weightKg.toString());
 
     const response = await axiosInstance.post<AnalysisResponse>('/measurements/analyze', formData, {
       headers: {
@@ -160,12 +174,7 @@ export const api = {
   },
 
   getHistory: async (): Promise<MeasurementSession[]> => {
-      const response = await axiosInstance.get<MeasurementSession[]>('/measurements/history');
-      return response.data;
-  },
-  
-  saveMeasurement: async (sessionData: any): Promise<MeasurementSession> => {
-      const response = await axiosInstance.post<MeasurementSession>('/measurements/save', sessionData);
+      const response = await axiosInstance.get<MeasurementSession[]>('/history/');
       return response.data;
   },
 

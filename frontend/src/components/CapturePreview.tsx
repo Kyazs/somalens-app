@@ -30,29 +30,41 @@ export const CapturePreview: React.FC = () => {
   };
 
   const convertMeasurementToResult = (measurement: MeasurementResponse) => {
+    const circ = measurement.circumferences || {};
+    
     return {
+      id: measurement.id,
+      front_image_url: measurement.front_image_url,
+      side_image_url: measurement.side_image_url,
       proxy_measurements: {
-        height: measurement.height || 0,
-        weight: measurement.weight || 0,
-        chest: measurement.chest_circumference || 0,
-        waist: measurement.waist_circumference || 0,
-        hip: measurement.hip_circumference || 0,
-        arm: measurement.arm_circumference || 0,
-        thigh: measurement.thigh_circumference || 0,
-        calf: measurement.calf_circumference || 0,
+        Stature: measurement.height || circ.Stature || 0,
+        Weight: measurement.weight || circ.Weight || 0,
+        Body_Fat_Percentage: measurement.body_fat_percentage || circ.Body_Fat_Percentage || 0,
+        Chest_Girth: circ.Chest_Circumference || circ.Chest_Girth || 0,
+        Waist_Girth: circ.Waist_Circumference || circ.Waist_Girth || 0,
+        Hip_Girth: circ.Hip_Circumference || circ.Hip_Girth || 0,
+        Thigh_Girth: circ.Thigh_Circumference || circ.Thigh_Girth || 0,
+        Arm_Circumference_Flexed: circ.Arm_Circumference_Flexed || 0,
+        Calf_Circumference: circ.Calf_Circumference || 0,
+        Triceps_Skinfold: circ.Triceps_Skinfold || 0,
+        Subscapular_Skinfold: circ.Subscapular_Skinfold || 0,
+        Supraspinale_Skinfold: circ.Supraspinale_Skinfold || 0,
+        Calf_Skinfold: circ.Calf_Skinfold || 0,
+        Humerus_Breadth: circ.Humerus_Breadth || 0,
+        Femur_Breadth: circ.Femur_Breadth || 0,
       },
       heath_carter_inputs: {
-        triceps_skinfold: measurement.skinfold_triceps || 0,
-        subscapular_skinfold: measurement.skinfold_subscapular || 0,
-        supraspinale_skinfold: measurement.skinfold_supraspinale || 0,
-        calf_skinfold: measurement.skinfold_calf || 0,
+        triceps_skinfold: circ.Triceps_Skinfold || 0,
+        subscapular_skinfold: circ.Subscapular_Skinfold || 0,
+        supraspinale_skinfold: circ.Supraspinale_Skinfold || 0,
+        calf_skinfold: circ.Calf_Skinfold || 0,
       },
       somatotype: {
         endomorphy: measurement.somatotype_endo || 0,
         mesomorphy: measurement.somatotype_meso || 0,
         ectomorphy: measurement.somatotype_ecto || 0,
         classification: measurement.somatotype_class || '',
-        hwr: 0,
+        hwr: circ.hwr || 0,
       }
     };
   };
