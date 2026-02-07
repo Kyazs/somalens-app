@@ -2,6 +2,8 @@
 
 FastAPI backend with SQLModel, Celery, and JWT authentication for robust, scalable API development.
 
+> **Note**: This directory contains only the backend. For full-stack deployment (frontend + backend + PostgreSQL), use the `docker-compose.yml` in the parent directory. See [`../README.md`](../README.md).
+
 ## Features
 
 - **FastAPI** - Modern, fast web framework for building APIs with Python 3.10+
@@ -97,14 +99,15 @@ These fields are used for:
 - Docker Compose
 - Make
 
-## Quick Start
+## Quick Start (Backend-Only Development)
+
+This Docker setup runs **backend only** with SQLite (no frontend, no PostgreSQL). Ideal for rapid backend iteration.
 
 ```bash
-git clone https://github.com/your-username/ultimate-backend-destroyer-of-worlds.git
-cd ultimate-backend-destroyer-of-worlds
+cd backend
 cp .env.example .env
-make dev
-make migrate
+make dev        # Starts API + Celery + Redis with hot-reload
+make migrate    # Apply database migrations
 # Access API docs at http://localhost:8000/docs
 ```
 

@@ -6,69 +6,130 @@ This guide describes how to deploy SomaLens to a production environment.
 
 The application consists of five main services orchestrated by Docker Compose:
 
-1. **Frontend**: Nginx container serving the built React SPA.
-2. **Backend (API)**: Python container running FastAPI with Uvicorn (Production build).
+1. **Frontend**: Nginx container serving the built React SPA with API proxying.
+2. **Backend (API)**: Python container running FastAPI with Uvicorn (4 workers).
 3. **Celery Worker**: Python container running Celery for background image processing tasks.
-4. **Database**: PostgreSQL container.
-5. **Redis**: Redis container for caching and task queue.
+4. **Database**: PostgreSQL 15 container.
+5. **Redis**: Redis 7 container for caching and task queue.
+
+## Prerequisites
+
+- Docker Engine 20.10+ and Docker Compose v2
+- Minimum 4GB RAM (ML models require ~2GB)
+- Ports 3000 (frontend) and 8000 (API) available
 
 ## Deployment Steps
 
-### 1. Prepare the Server
-- Ensure **Docker** and **Docker Compose** are installed on the target machine.
-- Ensure ports **80** (or 3000) and **8000** are available.
-- For a real production setup, you should put a reverse proxy (Nginx/Traefik) in front to handle HTTPS and route traffic to the container ports.
-
-### 2. Environment Configuration
-The application relies on environment variables for configuration.
-Update `docker-compose.yml` or create a `.env` file with secure values:
-
-- `POSTGRES_PASSWORD`: Set a strong password.
-- `SECRET_KEY`: Generate a random string (`openssl rand -hex 32`).
-- `DATABASE_URL`: `postgresql+asyncpg://postgres:<PASSWORD>@db:5432/somalens`
-- `REDIS_URL`: `redis://redis:6379/0`
-- `DEBUG`: Set to `false` in production.
-
-### 3. Build and Run
-Deploy the stack using the root Docker Compose file. This uses the production Dockerfiles (`backend/docker/Dockerfile.prod`).
+### 1. Clone and Configure
 
 ```bash
-docker-compose up --build -d
+git clone <repository-url>
+cd SomaLens/app
+
+# Create environment file from template
+cp .env.example .env
 ```
 
-### 4. Database Migrations
-After the containers are running, apply the database schema changes:
+### 2. Configure Production Environment
+
+Edit `.env` with secure production values:
 
 ```bash
-docker-compose exec api alembic upgrade head
+# Generate secure keys
+openssl rand -hex 32  # For JWT_SECRET_KEY
+openssl rand -hex 16  # For POSTGRES_PASSWORD
+```
+
+**Required changes in `.env`:**
+- `POSTGRES_PASSWORD`: Strong random password
+- `JWT_SECRET_KEY`: Generated secure key (32+ chars)
+- `DEBUG`: Ensure set to `false`
+
+> **Note**: The `CORS_ORIGINS` variable in `.env.example` is not currently enforced - CORS allows all origins (`*`). For production, consider implementing CORS origin restrictions in the backend code.
+
+### 3. Build and Deploy
+
+```bash
+# Build and start all services (detached mode)
+docker compose up --build -d
+
+# View logs to monitor startup
+docker compose logs -f
+```
+
+> **Note**: First build takes 5-10 minutes due to ML model downloads (~500MB).
+
+### 4. Run Database Migrations
+
+```bash
+docker compose exec api alembic upgrade head
 ```
 
 ### 5. Verify Deployment
-- **Frontend**: Check if the UI loads at your server's IP/domain (default port 3000).
-- **API**: Check health at `http://<host>:8000/docs` or `http://<host>:8000/health` (if implemented).
-- **Worker**: Check logs to ensure Celery connected to Redis:
-  ```bash
-  docker-compose logs -f celery_worker
-  ```
 
-## Maintenance
+| Service | Check | Expected |
+|---------|-------|----------|
+| Frontend | http://\<host\>:3000 | SomaLens UI loads |
+| API Docs | http://\<host\>:8000/docs | Swagger UI accessible |
+| API Health | http://\<host\>:8000/health | Returns 200 OK |
+| Worker | `docker compose logs celery_worker` | "celery@... ready" message |
 
-- **View Logs**:
-  ```bash
-  docker-compose logs -f
-  # Specific service
-  docker-compose logs -f api
-  ```
+## Service Management
 
-- **Backup Database**:
-  ```bash
-  docker-compose exec db pg_dump -U postgres somalens > backup_$(date +%F).sql
-  ```
+### View Logs
+```bash
+# All services
+docker compose logs -f
 
-- **Update Application**:
-  ```bash
-  git pull
-  docker-compose up --build -d
-  # Apply any new migrations
-  docker-compose exec api alembic upgrade head
-  ```
+# Specific service
+docker compose logs -f api
+docker compose logs -f celery_worker
+```
+
+### Restart Services
+```bash
+# Restart single service
+docker compose restart api
+
+# Restart all
+docker compose restart
+```
+
+### Stop/Start
+```bash
+docker compose stop
+docker compose start
+```
+
+## Database Operations
+
+### Backup
+```bash
+docker compose exec db pg_dump -U postgres somalens > backup_$(date +%F).sql
+```
+
+### Restore
+```bash
+cat backup.sql | docker compose exec -T db psql -U postgres somalens
+```
+
+## Updating the Application
+
+```bash
+# Pull latest changes
+git pull
+
+# Rebuild and restart (zero-downtime not guaranteed)
+docker compose up --build -d
+
+# Apply any new migrations
+docker compose exec api alembic upgrade head
+```
+
+## Production Recommendations
+
+1. **Reverse Proxy**: Place Nginx/Traefik in front for HTTPS termination
+2. **Secrets Management**: Use Docker secrets or external vault for credentials
+3. **Monitoring**: Add Prometheus/Grafana for metrics
+4. **Backups**: Schedule automated PostgreSQL backups
+5. **Resource Limits**: Configure Docker resource constraints for stability
