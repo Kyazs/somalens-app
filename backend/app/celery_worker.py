@@ -5,7 +5,7 @@ celery_app = Celery(
     "app",
     broker=settings.REDIS_URL,
     backend=settings.REDIS_URL,
-    include=["app.tasks.example"],
+    include=["app.tasks.example", "app.tasks.ml"],
 )
 
 celery_app.conf.update(
