@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export function RegisterPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,15 +17,20 @@ export function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    if (password !== confirmPassword) {
+if (password !== confirmPassword) {
       setError('Passwords do not match');
+      return;
+    }
+
+    if (name.trim().length < 2) {
+      setError('Name must be at least 2 characters');
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      await register(email, password);
+      await register(email, password, name.trim());
       navigate('/capture');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to register');
@@ -42,11 +48,26 @@ export function RegisterPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-lg p-8">
-          {error && (
+{error && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 text-red-600 rounded-lg text-sm">
               {error}
             </div>
           )}
+
+          <div className="mb-6">
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
+              Full Name
+            </label>
+            <input
+              type="text"
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
+              placeholder="John Doe"
+              required
+            />
+          </div>
 
           <div className="mb-6">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
