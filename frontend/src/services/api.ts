@@ -134,7 +134,7 @@ export const api = {
 
   register: async (email: string, password: string): Promise<UserResponse> => {
     try {
-      const response = await axiosInstance.post<UserResponse>('/users', {
+      const response = await axiosInstance.post<UserResponse>('/users/', {
         email,
         password,
       });
