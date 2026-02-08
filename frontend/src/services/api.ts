@@ -5,9 +5,18 @@ import type { MeasurementSession } from '../types/pose';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export interface UserResponse {
-  id: string;
+  id: number;
   email: string;
-  created_at: string;
+  name: string;
+  age: number | null;
+  gender: string | null;
+  is_active: boolean;
+}
+
+export interface UserUpdate {
+  name?: string;
+  age?: number | null;
+  gender?: string | null;
 }
 
 export interface LoginResponse {
@@ -132,11 +141,12 @@ export const api = {
     }
   },
 
-  register: async (email: string, password: string): Promise<UserResponse> => {
+register: async (email: string, password: string, name: string): Promise<UserResponse> => {
     try {
       const response = await axiosInstance.post<UserResponse>('/users/', {
         email,
         password,
+        name,
       });
       return response.data;
     } catch (error) {
@@ -144,8 +154,13 @@ export const api = {
     }
   },
 
-  getMe: async (): Promise<UserResponse> => {
+getMe: async (): Promise<UserResponse> => {
     const response = await axiosInstance.get<UserResponse>('/users/me');
+    return response.data;
+  },
+
+  updateProfile: async (data: UserUpdate): Promise<UserResponse> => {
+    const response = await axiosInstance.patch<UserResponse>('/users/me', data);
     return response.data;
   },
 
