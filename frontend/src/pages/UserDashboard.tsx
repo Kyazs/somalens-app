@@ -66,14 +66,17 @@ export function UserDashboard() {
             <div className="w-3 h-3 bg-emerald-500 rounded-full" />
             SomaLens
           </Link>
-          <nav className="flex items-center gap-6">
+<nav className="flex items-center gap-6">
             <Link to="/capture" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
               New Scan
             </Link>
              <Link to="/history" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
               History
             </Link>
-            <button 
+            <Link to="/profile" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
+              Profile
+            </Link>
+            <button
               onClick={() => {
                 localStorage.removeItem('access_token');
                 localStorage.removeItem('refresh_token');
