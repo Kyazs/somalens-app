@@ -4,6 +4,7 @@ import { usePoseLandmarker } from '../hooks/usePoseLandmarker';
 import { usePoseValidation } from '../hooks/usePoseValidation';
 import { useImageCapture } from '../hooks/useImageCapture';
 import { useCaptureStore } from '../stores/captureStore';
+import { useAuth } from '../context/AuthContext';
 import PoseGuide from '../components/PoseGuide';
 import { CapturePreview } from '../components/CapturePreview';
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision';
@@ -114,12 +115,23 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
 
 const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: () => void }) => {
   const { userData, setUserData } = useCaptureStore();
+  const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
+
+  const displayName = userData.name || user?.name || '';
+  const displayAge = userData.age || user?.age?.toString() || '';
+  const displayGender = userData.gender || (user?.gender === 'male' || user?.gender === 'female' ? user.gender : 'male');
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const age = parseInt(userData.age);
+    if (!displayName) {
+      setError("Name is required");
+      return;
+    }
+    setUserData({ name: displayName, age: displayAge, gender: displayGender });
+    
+    const age = parseInt(displayAge);
     const height = parseInt(userData.height);
     const weight = parseInt(userData.weight);
 
@@ -158,14 +170,14 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
             </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+<form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
                 <div>
                     <label className="block text-sm font-medium text-white/60 mb-2">Full Name</label>
                     <input 
                         type="text" 
                         required
-                        value={userData.name}
+                        value={displayName}
                         onChange={e => setUserData({ name: e.target.value })}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
                         placeholder="John Doe"
@@ -178,7 +190,7 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                             type="number" 
                             required
                             min="10" max="100"
-                            value={userData.age}
+                            value={displayAge}
                             onChange={e => setUserData({ age: e.target.value })}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
                             placeholder="25"
@@ -187,7 +199,7 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                      <div>
                         <label className="block text-sm font-medium text-white/60 mb-2">Gender</label>
                         <select 
-                            value={userData.gender}
+                            value={displayGender}
                             onChange={e => setUserData({ gender: e.target.value as 'male' | 'female' })}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
                         >

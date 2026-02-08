@@ -1,14 +1,15 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '../services/api';
-import type { UserResponse } from '../services/api';
+import type { UserResponse, UserUpdate } from '../services/api';
 
 interface AuthContextType {
   user: UserResponse | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
+  updateProfile: (data: UserUpdate) => Promise<void>;
   logout: () => void;
 }
 
@@ -44,10 +45,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(userData);
   };
 
-  const register = async (email: string, password: string) => {
-    await api.register(email, password);
-    // Auto login after register
+const register = async (email: string, password: string, name: string) => {
+    await api.register(email, password, name);
     await login(email, password);
+  };
+
+  const updateProfile = async (data: UserUpdate) => {
+    const updatedUser = await api.updateProfile(data);
+    setUser(updatedUser);
   };
 
   const logout = () => {
@@ -56,14 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
-  return (
+return (
     <AuthContext.Provider 
       value={{ 
         user, 
         isAuthenticated: !!user, 
         isLoading, 
         login, 
-        register, 
+        register,
+        updateProfile,
         logout 
       }}
     >
