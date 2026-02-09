@@ -7,6 +7,7 @@ from sqlmodel import Field, SQLModel
 
 class MeasurementBase(SQLModel):
     user_id: int = Field(foreign_key="user.id", index=True)
+    name: Optional[str] = Field(default="Untitled Measurement")
     front_image_url: Optional[str] = None
 
     side_image_url: Optional[str] = None

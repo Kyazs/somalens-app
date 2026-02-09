@@ -58,6 +58,72 @@ export interface MeasurementResponse {
   created_at: string;
 }
 
+export interface MacroBreakdown {
+  protein_g: number;
+  carbs_g: number;
+  fats_g: number;
+  protein_pct: number;
+  carbs_pct: number;
+  fats_pct: number;
+}
+
+export interface MealRecommendations {
+  breakfast: string[];
+  lunch: string[];
+  dinner: string[];
+  snacks: string[];
+}
+
+export interface FoodItem {
+  name: string;
+  category: string;
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugars_g: number;
+  sodium_mg: number;
+  portion_recommendation: string;
+  meal_timing: string;
+}
+
+export interface MealRecommendationsWithNutrients {
+  breakfast: FoodItem[];
+  lunch: FoodItem[];
+  dinner: FoodItem[];
+  snacks: FoodItem[];
+}
+
+export interface ExerciseInfo {
+  exerciseId: string;
+  name: string;
+  gifUrl: string;
+  targetMuscles: string[];
+  bodyParts: string[];
+  equipments: string[];
+  instructions: string[];
+}
+
+export interface RecommendationResponse {
+  template_id?: string;
+  ter?: number;
+  macros?: MacroBreakdown;
+  meals?: MealRecommendationsWithNutrients;
+  fitness_strategy?: string;
+  diet_principles?: string;
+  exercises?: ExerciseInfo[];
+  exercises_ppl?: {
+    push: ExerciseInfo[];
+    pull: ExerciseInfo[];
+    legs: ExerciseInfo[];
+  };
+  exercise_type?: string;
+  somatotype_description?: string;
+  message?: string;
+  suggestion?: string;
+}
+
 const axiosInstance: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
@@ -170,7 +236,8 @@ getMe: async (): Promise<UserResponse> => {
     age: number, 
     gender: 'male' | 'female',
     heightCm: number,
-    weightKg: number
+    weightKg: number,
+    name?: string
   ): Promise<AnalysisResponse> => {
     const formData = new FormData();
     formData.append('front_image', frontImage, 'front.jpg');
@@ -179,6 +246,7 @@ getMe: async (): Promise<UserResponse> => {
     formData.append('gender', gender);
     formData.append('height', heightCm.toString());
     formData.append('weight', weightKg.toString());
+    if (name) formData.append('name', name);
 
     const response = await axiosInstance.post<AnalysisResponse>('/measurements/analyze', formData, {
       headers: {
@@ -228,5 +296,24 @@ getMe: async (): Promise<UserResponse> => {
     }
     
     throw new Error('Processing timeout. Please try again.');
+  },
+
+  getRecommendation: async (
+    measurementId: number,
+    goal: string,
+    activityLevel: string,
+    exerciseComplexity: string,
+    exerciseType: string
+  ): Promise<RecommendationResponse> => {
+    const params = new URLSearchParams({
+      goal,
+      activity_level: activityLevel,
+      exercise_complexity: exerciseComplexity,
+      exercise_type: exerciseType,
+    });
+    const response = await axiosInstance.get<RecommendationResponse>(
+      `/recommendations/${measurementId}?${params.toString()}`
+    );
+    return response.data;
   }
 };

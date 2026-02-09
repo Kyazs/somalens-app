@@ -32,9 +32,16 @@ export function UserDashboard() {
 
     const circumferences = session.circumferences || {};
     
+    const proxy_measurements: Record<string, number> = {
+      ...circumferences,
+      Stature: session.height || 0,
+      Weight: session.weight || 0,
+      Body_Fat_Percentage: session.body_fat_percentage || 0,
+    };
+
     const result: AnalysisResponse = {
       id: session.id,
-      proxy_measurements: circumferences,
+      proxy_measurements,
       heath_carter_inputs: circumferences,
       somatotype: {
         endomorphy: session.somatotype_endo ?? 0,
@@ -47,7 +54,23 @@ export function UserDashboard() {
       side_image_url: session.side_image_url
     };
 
-    navigate('/results', { state: { result } });
+    navigate('/results', { 
+      state: { 
+        result,
+        measurementId: session.id,
+        preferences: {
+          goal: 'maintenance',
+          activityLevel: 'moderate',
+          exerciseComplexity: 'beginner',
+          exerciseType: 'gym',
+        },
+        userInfo: {
+          name: session.name,
+          age: session.age,
+          gender: session.gender,
+        }
+      } 
+    });
   };
 
   if (loading) {

@@ -91,7 +91,8 @@ export const CapturePreview: React.FC = () => {
         age,
         userData.gender,
         height,
-        weight
+        weight,
+        userData.name || undefined
       );
       
       const measurementId = (submitResponse as unknown as { id: number }).id;
@@ -102,7 +103,23 @@ export const CapturePreview: React.FC = () => {
       );
       
       const result = convertMeasurementToResult(completedMeasurement);
-      navigate('/results', { state: { result } });
+      navigate('/results', { 
+        state: { 
+          result,
+          measurementId: completedMeasurement.id,
+          preferences: {
+            goal: userData.goal,
+            activityLevel: userData.activityLevel,
+            exerciseComplexity: userData.exerciseComplexity,
+            exerciseType: userData.exerciseType,
+          },
+          userInfo: {
+            name: userData.name || null,
+            age: parseInt(userData.age) || null,
+            gender: userData.gender,
+          }
+        } 
+      });
     } catch (err) {
       console.error('Analysis failed:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');

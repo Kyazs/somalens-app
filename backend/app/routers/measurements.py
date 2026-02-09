@@ -26,6 +26,7 @@ async def analyze_measurements(
     gender: str = Form(...),
     height: float = Form(...),
     weight: float = Form(...),
+    name: Optional[str] = Form(None),
 ):
     """
     Analyze body measurements from front and side images.
@@ -64,6 +65,7 @@ async def analyze_measurements(
     # Create Measurement record
     measurement = Measurement(
         user_id=current_user.id,
+        name=name or "Untitled Measurement",
         front_image_url=front_url,
         side_image_url=side_url,
         age=age,

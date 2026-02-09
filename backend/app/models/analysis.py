@@ -5,7 +5,8 @@ from sqlalchemy import JSON, Column
 
 class AnalysisBase(SQLModel):
     measurement_id: int = Field(foreign_key="measurement.id", index=True)
-    status: str = Field(default="pending") # pending, completed, failed
+    recommendation_id: int | None = Field(default=None, foreign_key="recommendation.id")
+    status: str = Field(default="pending")
     result: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     error_message: Optional[str] = None
     model_version: Optional[str] = None
