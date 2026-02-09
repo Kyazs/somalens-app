@@ -58,7 +58,23 @@ export function HistoryPage() {
       side_image_url: session.side_image_url,
     };
 
-    navigate('/results', { state: { result } });
+    navigate('/results', { 
+      state: { 
+        result,
+        measurementId: session.id,
+        preferences: {
+          goal: 'maintenance',
+          activityLevel: 'moderate',
+          exerciseComplexity: 'beginner',
+          exerciseType: 'gym',
+        },
+        userInfo: {
+          name: session.name,
+          age: session.age,
+          gender: session.gender,
+        }
+      } 
+    });
   };
 
   const getImageUrl = (path: string | null) => {
