@@ -117,19 +117,40 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
   const { userData, setUserData } = useCaptureStore();
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  
+  // Track which fields user has touched - once touched, don't use fallback
+  const [touched, setTouched] = useState({ name: false, age: false, gender: false });
 
-  const displayName = userData.name || user?.name || '';
-  const displayAge = userData.age || user?.age?.toString() || '';
-  const displayGender = userData.gender || (user?.gender === 'male' || user?.gender === 'female' ? user.gender : 'male');
+  // Display values: use userData if touched, otherwise fallback to user profile
+  const displayName = touched.name ? userData.name : (userData.name || user?.name || '');
+  const displayAge = touched.age ? userData.age : (userData.age || user?.age?.toString() || '');
+  const displayGender = touched.gender ? userData.gender : (userData.gender || (user?.gender === 'male' || user?.gender === 'female' ? user.gender : 'male'));
+
+  const handleNameChange = (value: string) => {
+    setTouched(prev => ({ ...prev, name: true }));
+    setUserData({ name: value });
+  };
+
+  const handleAgeChange = (value: string) => {
+    setTouched(prev => ({ ...prev, age: true }));
+    setUserData({ age: value });
+  };
+
+  const handleGenderChange = (value: 'male' | 'female') => {
+    setTouched(prev => ({ ...prev, gender: true }));
+    setUserData({ gender: value });
+  };
   
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Save display values to store before validation
+    setUserData({ name: displayName, age: displayAge, gender: displayGender });
     
     if (!displayName) {
       setError("Name is required");
       return;
     }
-    setUserData({ name: displayName, age: displayAge, gender: displayGender });
     
     const age = parseInt(displayAge);
     const height = parseInt(userData.height);
@@ -178,7 +199,7 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                         type="text" 
                         required
                         value={displayName}
-                        onChange={e => setUserData({ name: e.target.value })}
+                        onChange={e => handleNameChange(e.target.value)}
                         className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
                         placeholder="John Doe"
                     />
@@ -191,7 +212,7 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                             required
                             min="10" max="100"
                             value={displayAge}
-                            onChange={e => setUserData({ age: e.target.value })}
+                            onChange={e => handleAgeChange(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
                             placeholder="25"
                         />
@@ -200,7 +221,7 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                         <label className="block text-sm font-medium text-white/60 mb-2">Gender</label>
                         <select 
                             value={displayGender}
-                            onChange={e => setUserData({ gender: e.target.value as 'male' | 'female' })}
+                            onChange={e => handleGenderChange(e.target.value as 'male' | 'female')}
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
                         >
                             <option value="male">Male</option>
@@ -234,9 +255,61 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                         />
                     </div>
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">What's Your Goal?</label>
+                        <select 
+                            value={userData.goal}
+                            onChange={e => setUserData({ goal: e.target.value as 'weight_loss' | 'weight_gain' | 'maintenance' })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                        >
+                            <option value="weight_loss">Weight Loss</option>
+                            <option value="weight_gain">Weight Gain</option>
+                            <option value="maintenance">Maintenance</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Activity Level</label>
+                        <select 
+                            value={userData.activityLevel}
+                            onChange={e => setUserData({ activityLevel: e.target.value as 'sedentary' | 'light' | 'moderate' | 'heavy' })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                        >
+                            <option value="sedentary">Sedentary</option>
+                            <option value="light">Lightly Active</option>
+                            <option value="moderate">Moderately Active</option>
+                            <option value="heavy">Very Active</option>
+                        </select>
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Fitness Level</label>
+                        <select 
+                            value={userData.exerciseComplexity}
+                            onChange={e => setUserData({ exerciseComplexity: e.target.value as 'beginner' | 'intermediate' | 'hard' })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                        >
+                            <option value="beginner">Beginner</option>
+                            <option value="intermediate">Intermediate</option>
+                            <option value="hard">Advanced</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-white/60 mb-2">Workout Preference</label>
+                        <select 
+                            value={userData.exerciseType}
+                            onChange={e => setUserData({ exerciseType: e.target.value as 'bodyweight' | 'gym' })}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                        >
+                            <option value="bodyweight">Bodyweight Only</option>
+                            <option value="gym">Gym Equipment</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
-            <button 
+            <button
                 type="submit"
                 className="w-full bg-emerald-500 text-black font-bold py-4 rounded-xl hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20"
             >
