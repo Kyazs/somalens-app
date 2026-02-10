@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { usePDF } from 'react-to-pdf';
 import type { AnalysisResponse, RecommendationResponse, ExerciseInfo, FoodItem } from '../services/api';
 import { api } from '../services/api';
 import SomatotypeChart from '../components/SomatotypeChart';
+import { ResultPdfTemplate } from '../components/ResultPdfTemplate';
 import { ExerciseCard } from '../components/ExerciseCard';
 import { useCaptureStore } from '../stores/captureStore';
 import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS } from '../types/pose';
@@ -38,6 +40,23 @@ export function ResultsPage() {
   const [recommendation, setRecommendation] = useState<RecommendationResponse | null>(null);
   const [recLoading, setRecLoading] = useState(false);
   const [recError, setRecError] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const pdfContainerRef = useRef<HTMLDivElement>(null);
+  const { toPDF, targetRef } = usePDF({
+    filename: 'somalens-analysis.pdf',
+    page: { format: 'A4', orientation: 'portrait' },
+    method: 'save',
+  });
+
+  const handleExportPDF = useCallback(async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      await toPDF();
+    } finally {
+      setIsExporting(false);
+    }
+  }, [toPDF, isExporting]);
 
   useEffect(() => {
     if (!result) {
@@ -122,8 +141,36 @@ export function ResultsPage() {
           <div className="text-xs font-bold uppercase tracking-widest text-white/50">
             Analysis Report
           </div>
+          <button 
+            onClick={handleExportPDF}
+            disabled={isExporting}
+            className="ml-4 px-4 py-2 cursor-pointer bg-white/10 hover:bg-white/20 text-white rounded-lg text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isExporting ? 'Exporting...' : 'Export PDF'}
+          </button>
         </div>
       </header>
+
+      {/* PDF Template - always rendered offscreen for capture */}
+      <div 
+        ref={pdfContainerRef}
+        style={{ 
+          position: 'absolute', 
+          left: '-9999px', 
+          top: 0,
+          width: '210mm',
+          backgroundColor: '#fff',
+        }}
+      >
+        <ResultPdfTemplate 
+          ref={targetRef}
+          userInfo={userInfo}
+          preferences={preferences}
+          somatotype={somatotype}
+          measurements={proxy_measurements}
+          recommendation={recommendation}
+        />
+      </div>
 
       <main className="container mx-auto pt-20 max-w-4xl space-y-12">
         {/* User Details & Analysis Preferences */}
