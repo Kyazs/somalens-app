@@ -39,13 +39,13 @@ const PoseGuide: React.FC<PoseGuideProps> = ({
         <div className={`
           px-5 py-3 rounded-xl backdrop-blur-xl border shadow-lg transition-all duration-300
           ${isValid 
-            ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-100' 
+            ? 'bg-teal-500/20 border-teal-500/30 text-teal-100' 
             : 'bg-rose-500/20 border-rose-500/30 text-rose-100'}
         `}>
           <div className="flex items-center gap-3">
             <div className={`
               w-3 h-3 rounded-full animate-pulse
-              ${isValid ? 'bg-emerald-400' : 'bg-rose-500'}
+              ${isValid ? 'bg-teal-400' : 'bg-rose-500'}
             `} />
             <h3 className="font-bold text-lg tracking-wide uppercase">
               {isValid ? 'Ready to Capture' : 'Adjustment Needed'}
@@ -122,7 +122,7 @@ const StatusItem = ({ label, active }: { label: string; active: boolean }) => (
     <div className={`
       w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-black border transition-all duration-300
       ${active 
-        ? 'bg-emerald-500 border-emerald-400 text-white scale-110 shadow-[0_0_10px_rgba(16,185,129,0.4)]' 
+        ? 'bg-teal-500 border-teal-400 text-white scale-110 shadow-[0_0_10px_rgba(13,148,136,0.4)]' 
         : 'bg-transparent border-white/20 text-transparent scale-100'}
     `}>
       ✓
