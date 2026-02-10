@@ -25,6 +25,7 @@ class MeasurementBase(SQLModel):
 
 class Measurement(MeasurementBase, table=True):
     id: int | None = Field(default=None, primary_key=True)
+    deleted_at: datetime | None = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 

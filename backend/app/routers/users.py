@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, EmailStr, Field
@@ -83,3 +84,15 @@ async def update_profile(
     session.refresh(current_user)
 
     return current_user
+
+
+@router.delete("/me", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_me(
+    current_user: Annotated[User, Depends(get_current_user)],
+    session: Annotated[Session, Depends(get_session)]
+):
+    current_user.is_active = False
+    current_user.deleted_at = datetime.utcnow()
+    session.add(current_user)
+    session.commit()
+    return None
