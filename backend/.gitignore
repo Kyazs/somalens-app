@@ -47,3 +47,7 @@ Thumbs.db
 # Internal tools
 .sisyphus/
 .opencode/
+
+# User Data
+uploads/
+data/
