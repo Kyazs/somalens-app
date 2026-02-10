@@ -5,6 +5,7 @@ import type { AnalysisResponse } from '../services/api';
 import type { MeasurementSession } from '../types/pose';
 import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS, ADDITIONAL_GIRTH_KEYS } from '../types/pose';
 import AppNavbar from '../components/AppNavbar';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -14,6 +15,7 @@ export function HistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSession, setSelectedSession] = useState<MeasurementSession | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -81,6 +83,20 @@ export function HistoryPage() {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     return `${API_URL.replace('/api/v1', '')}${path}`;
+  };
+
+  const handleDeleteScan = async () => {
+    if (deleteId === null) return;
+    try {
+      await api.deleteMeasurement(deleteId);
+      setHistory(prev => prev.filter(item => item.id !== deleteId));
+      if (selectedSession?.id === deleteId) {
+        setSelectedSession(null);
+      }
+    } catch (err) {
+      console.error('Failed to delete scan:', err);
+      setError('Failed to delete scan');
+    }
   };
 
   const formatKey = (key: string) => {
@@ -282,6 +298,19 @@ export function HistoryPage() {
                                 <polyline points="10 9 9 9 8 9"></polyline>
                               </svg>
                             </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setDeleteId(session.id);
+                              }}
+                              className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                              title="Delete Scan"
+                            >
+                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                              </svg>
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -442,6 +471,16 @@ export function HistoryPage() {
           )}
         </main>
       </div>
+      
+      <ConfirmationModal
+        isOpen={deleteId !== null}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDeleteScan}
+        title="Delete Scan"
+        message="Are you sure you want to delete this scan? This action cannot be undone."
+        confirmLabel="Delete Scan"
+        isDangerous={true}
+      />
     </>
   );
 }

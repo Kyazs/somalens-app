@@ -11,4 +11,5 @@ class User(SQLModel, table=True):
     age: Optional[int] = None
     gender: Optional[str] = None
     is_active: bool = Field(default=True)
+    deleted_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)

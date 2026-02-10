@@ -1,15 +1,20 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import AppNavbar from '../components/AppNavbar';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 export function ProfilePage() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, logout } = useAuth();
+  const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');
   const [age, setAge] = useState<string>(user?.age?.toString() || '');
   const [gender, setGender] = useState(user?.gender || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,6 +45,16 @@ export function ProfilePage() {
       setError(err instanceof Error ? err.message : 'Failed to update profile');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await api.deleteAccount();
+      logout();
+      navigate('/');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to delete account');
     }
   };
 
@@ -138,7 +153,31 @@ export function ProfilePage() {
             </button>
           </form>
         </div>
+
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-rose-100 p-6 sm:p-8">
+          <h2 className="text-xl font-bold text-rose-600 mb-2">Danger Zone</h2>
+          <p className="text-slate-500 mb-6 text-sm">
+            Once you delete your account, there is no going back. Please be certain.
+          </p>
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            type="button"
+            className="w-full bg-rose-50 text-rose-600 border border-rose-200 py-3 rounded-xl font-medium hover:bg-rose-100 transition-colors shadow-sm"
+          >
+            Delete Account
+          </button>
+        </div>
       </main>
+
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteAccount}
+        title="Delete Account"
+        message="Are you sure you want to delete your account? This action cannot be undone."
+        confirmLabel="Delete Account"
+        isDangerous={true}
+      />
     </div>
   );
 }

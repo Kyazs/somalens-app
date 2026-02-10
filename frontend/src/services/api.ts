@@ -315,5 +315,13 @@ getMe: async (): Promise<UserResponse> => {
       `/recommendations/${measurementId}?${params.toString()}`
     );
     return response.data;
+  },
+
+  deleteAccount: async (): Promise<void> => {
+    await axiosInstance.delete('/users/me');
+  },
+
+  deleteMeasurement: async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/history/${id}`);
   }
 };

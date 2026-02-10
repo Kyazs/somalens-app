@@ -7,6 +7,7 @@ import { ResultPdfTemplate } from '../components/ResultPdfTemplate';
 import { useCaptureStore } from '../stores/captureStore';
 import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS } from '../types/pose';
 import AppNavbar from '../components/AppNavbar';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 
 interface LocationState {
   result: AnalysisResponse;
@@ -56,6 +57,7 @@ export function ResultsPage() {
     breadths: boolean;
     girths: boolean;
   }>({ skinfolds: false, breadths: false, girths: false });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const handleExportPDF = useCallback(async () => {
     if (isExporting) return;
@@ -66,6 +68,16 @@ export function ResultsPage() {
       setIsExporting(false);
     }
   }, [toPDF, isExporting]);
+
+  const handleDelete = async () => {
+    if (!measurementId) return;
+    try {
+      await api.deleteMeasurement(measurementId);
+      navigate('/history');
+    } catch (err) {
+      console.error('Failed to delete scan:', err);
+    }
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -208,6 +220,14 @@ export function ResultsPage() {
                 >
                     {isExporting ? 'Exporting...' : 'Export PDF'}
                 </button>
+                {measurementId && (
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 cursor-pointer bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 rounded-xl text-sm font-bold transition-colors shadow-sm"
+                  >
+                    Delete
+                  </button>
+                )}
             </div>
 
           {/* ROW 1: User Details + Somatotype Classification */}
@@ -700,6 +720,16 @@ export function ResultsPage() {
         )}
 
       </div>
+      
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDelete}
+        title="Delete Scan"
+        message="Are you sure you want to delete this scan? This action cannot be undone."
+        confirmLabel="Delete Scan"
+        isDangerous={true}
+      />
     </>
   );
 }
