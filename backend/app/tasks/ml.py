@@ -198,8 +198,13 @@ def read_images_from_filesystem(measurement: Measurement) -> Tuple[bytes, bytes]
         
         uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
         
+        # Get path to 'backend' directory (parent of 'app') - robust finding of project root
+        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        backend_uploads = os.path.join(backend_dir, "uploads")
+        
         # Fallback: Try multiple possible paths for uploads directory
         possible_dirs = [
+            backend_uploads, # backend/uploads (most likely for local dev)
             uploads_dir,  # app/uploads (relative to app/)
             "/app/uploads",  # Docker absolute path
             os.path.join(os.getcwd(), "uploads"),  # Current working dir
