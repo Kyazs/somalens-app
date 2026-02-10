@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import AppNavbar from '../components/AppNavbar';
 
 export function ProfilePage() {
   const { user, updateProfile } = useAuth();
@@ -44,72 +44,41 @@ export function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="fixed top-0 left-0 right-0 bg-black/80 backdrop-blur-md z-50 border-b border-white/10">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/dashboard" className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-            <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-            SomaLens
-          </Link>
-          <nav className="flex items-center gap-6">
-            <Link to="/dashboard" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
-              Dashboard
-            </Link>
-            <Link to="/capture" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
-              New Scan
-            </Link>
-            <Link to="/history" className="text-sm font-medium text-white/60 hover:text-white transition-colors">
-              History
-            </Link>
-            <Link to="/profile" className="text-sm font-medium text-white transition-colors">
-              Profile
-            </Link>
-            <button 
-              onClick={() => {
-                localStorage.removeItem('access_token');
-                localStorage.removeItem('refresh_token');
-                window.location.href = '/login';
-              }}
-              className="text-sm font-medium text-white/60 hover:text-rose-400 transition-colors"
-            >
-              Sign Out
-            </button>
-          </nav>
-        </div>
-      </header>
+    <div className="min-h-screen bg-slate-50">
+      <AppNavbar />
 
-      <main className="container mx-auto px-4 py-24 max-w-2xl">
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white mb-2">Profile Settings</h1>
-          <p className="text-white/60">Manage your account information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">Profile Settings</h1>
+          <p className="text-slate-500">Manage your account information</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-sm">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {error && (
-              <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-xl text-sm">
+              <div className="p-4 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm">
                 {error}
               </div>
             )}
 
             {success && (
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-xl text-sm">
+              <div className="p-4 bg-teal-50 border border-teal-200 text-teal-700 rounded-xl text-sm">
                 Profile updated successfully
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-white/60 mb-2">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-2">
                 Email
               </label>
-              <div className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white/40">
+              <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-400">
                 {user?.email}
               </div>
-              <p className="text-xs text-white/40 mt-1">Email cannot be changed</p>
+              <p className="text-xs text-slate-400 mt-1">Email cannot be changed</p>
             </div>
 
             <div>
-              <label htmlFor="name" className="block text-sm font-medium text-white/60 mb-2">
+              <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-2">
                 Full Name
               </label>
               <input
@@ -117,14 +86,14 @@ export function ProfilePage() {
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                 placeholder="Your name"
                 required
               />
             </div>
 
             <div>
-              <label htmlFor="age" className="block text-sm font-medium text-white/60 mb-2">
+              <label htmlFor="age" className="block text-sm font-medium text-slate-700 mb-2">
                 Age
               </label>
               <input
@@ -132,7 +101,7 @@ export function ProfilePage() {
                 id="age"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-white/30 focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                 placeholder="Optional"
                 min="1"
                 max="120"
@@ -140,29 +109,29 @@ export function ProfilePage() {
             </div>
 
             <div>
-              <label htmlFor="gender" className="block text-sm font-medium text-white/60 mb-2">
+              <label htmlFor="gender" className="block text-sm font-medium text-slate-700 mb-2">
                 Gender
               </label>
               <select
                 id="gender"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
               >
-                <option value="" className="bg-gray-900">Select (Optional)</option>
-                <option value="male" className="bg-gray-900">Male</option>
-                <option value="female" className="bg-gray-900">Female</option>
-                <option value="other" className="bg-gray-900">Other</option>
+                <option value="">Select (Optional)</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
               </select>
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full bg-emerald-500 text-black py-3 rounded-xl font-bold hover:bg-emerald-400 transition-colors disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
+              className="w-full bg-teal-600 text-white py-3 rounded-xl font-medium hover:bg-teal-700 transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed flex justify-center items-center"
             >
               {isSubmitting ? (
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               ) : (
                 'Save Changes'
               )}

@@ -10,6 +10,73 @@ import { CapturePreview } from '../components/CapturePreview';
 import type { NormalizedLandmark } from '@mediapipe/tasks-vision';
 import type { ValidationResult } from '../types/pose';
 
+// --- Icons ---
+const Icons = {
+  Back: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>,
+  Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>,
+  ChevronRight: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>,
+  Camera: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>,
+  Upload: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>,
+  Refresh: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 4v6h-6"></path><path d="M1 20v-6h6"></path><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>,
+  Rotate: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>,
+  Orientation: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3a6.364 6.364 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>,
+  Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+};
+
+// --- Helper Components ---
+
+const SimpleNav = () => (
+  <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="h-16 flex items-center justify-between">
+        <Link to="/dashboard" className="text-xl font-bold tracking-tight text-slate-900">
+          SomaLens<span className="text-teal-600">.</span>
+        </Link>
+        <Link to="/dashboard" className="text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors flex items-center gap-1">
+          <Icons.Back />
+          Back to Dashboard
+        </Link>
+      </div>
+    </div>
+  </nav>
+);
+
+const StepIndicator = ({ currentPhase }: { currentPhase: 'setup' | 'method' }) => {
+  const steps = [
+    { id: 1, label: 'Details', status: currentPhase === 'setup' ? 'active' : 'completed' },
+    { id: 2, label: 'Method', status: currentPhase === 'setup' ? 'inactive' : 'active' },
+    { id: 3, label: 'Capture', status: 'inactive' },
+  ];
+
+  return (
+    <div className="max-w-md mx-auto mb-8">
+      <div className="flex items-center justify-between relative">
+        {/* Connecting lines */}
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-200 -z-10" />
+        
+        {steps.map((step) => (
+          <div key={step.id} className="flex flex-col items-center bg-slate-50 px-2">
+            <div className={`
+              w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold transition-colors duration-300
+              ${step.status === 'completed' ? 'bg-teal-500 text-white' : 
+                step.status === 'active' ? 'bg-teal-600 text-white' : 
+                'bg-slate-200 text-slate-400'}
+            `}>
+              {step.status === 'completed' ? <Icons.Check /> : step.id}
+            </div>
+            <span className={`
+              text-xs font-medium mt-2 transition-colors duration-300
+              ${step.status === 'active' ? 'text-slate-900' : 'text-slate-500'}
+            `}>
+              {step.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // --- Subcomponents for Phases ---
 
 const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplete: () => void }) => {
@@ -43,53 +110,56 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
     };
 
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-            <div className="w-full max-w-2xl space-y-8">
-                <button onClick={onBack} className="text-white/60 hover:text-white mb-4">← Back</button>
+        <div className="min-h-screen bg-slate-50">
+            <SimpleNav />
+            <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+                <button onClick={onBack} className="text-slate-500 hover:text-slate-900 mb-6 flex items-center gap-1 text-sm font-medium">
+                    <Icons.Back /> Back
+                </button>
                 
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold">Upload Photos</h1>
-                    <p className="text-white/60 mt-2">Upload a front and side profile photo.</p>
+                    <h1 className="text-xl font-semibold text-slate-900">Upload Photos</h1>
+                    <p className="text-slate-500 text-sm mt-1">Upload a front and side profile photo.</p>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center text-center">
-                        <div className="mb-4 font-bold text-emerald-400 uppercase tracking-widest text-xs">Front Profile</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center text-center">
+                        <div className="mb-4 font-semibold text-teal-600 uppercase tracking-widest text-xs">Front Profile</div>
                         {frontPreviewUrl ? (
-                            <div className="relative w-full aspect-[3/4] bg-black rounded-lg overflow-hidden mb-4 group">
+                            <div className="relative w-full aspect-[3/4] bg-slate-100 rounded-lg overflow-hidden mb-4 group">
                                 <img src={frontPreviewUrl} alt="Front" className="w-full h-full object-cover" />
                                 <button 
                                     onClick={() => { setFrontFile(null); setFrontPreviewUrl(null); }}
-                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white font-medium"
                                 >
                                     Remove
                                 </button>
                             </div>
                         ) : (
-                            <label className="w-full aspect-[3/4] bg-white/5 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors mb-4">
-                                <span className="text-2xl mb-2">+</span>
-                                <span className="text-sm text-white/60">Select Front Photo</span>
+                            <label className="w-full aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-teal-300 transition-all mb-4">
+                                <span className="text-slate-400 mb-2"><Icons.Plus /></span>
+                                <span className="text-sm text-slate-500">Select Front Photo</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'front')} />
                             </label>
                         )}
                     </div>
 
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col items-center text-center">
-                         <div className="mb-4 font-bold text-emerald-400 uppercase tracking-widest text-xs">Side Profile</div>
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 flex flex-col items-center text-center">
+                         <div className="mb-4 font-semibold text-teal-600 uppercase tracking-widest text-xs">Side Profile</div>
                         {sidePreviewUrl ? (
-                            <div className="relative w-full aspect-[3/4] bg-black rounded-lg overflow-hidden mb-4 group">
+                            <div className="relative w-full aspect-[3/4] bg-slate-100 rounded-lg overflow-hidden mb-4 group">
                                 <img src={sidePreviewUrl} alt="Side" className="w-full h-full object-cover" />
                                 <button 
                                     onClick={() => { setSideFile(null); setSidePreviewUrl(null); }}
-                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                    className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white font-medium"
                                 >
                                     Remove
                                 </button>
                             </div>
                         ) : (
-                            <label className="w-full aspect-[3/4] bg-white/5 border-2 border-dashed border-white/20 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-white/10 transition-colors mb-4">
-                                <span className="text-2xl mb-2">+</span>
-                                <span className="text-sm text-white/60">Select Side Photo</span>
+                            <label className="w-full aspect-[3/4] bg-slate-50 border-2 border-dashed border-slate-200 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 hover:border-teal-300 transition-all mb-4">
+                                <span className="text-slate-400 mb-2"><Icons.Plus /></span>
+                                <span className="text-sm text-slate-500">Select Side Photo</span>
                                 <input type="file" accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, 'side')} />
                             </label>
                         )}
@@ -100,10 +170,10 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
                     onClick={handleSubmit}
                     disabled={!frontFile || !sideFile}
                     className={`
-                        w-full py-4 rounded-xl font-bold transition-all
+                        w-full py-4 rounded-xl font-medium transition-all shadow-sm
                         ${frontFile && sideFile 
-                            ? 'bg-emerald-500 text-black hover:bg-emerald-400 shadow-lg shadow-emerald-500/20' 
-                            : 'bg-white/10 text-white/40 cursor-not-allowed'}
+                            ? 'bg-teal-600 text-white hover:bg-teal-700' 
+                            : 'bg-slate-100 text-slate-400 cursor-not-allowed'}
                     `}
                 >
                     Analyze Photos
@@ -113,7 +183,7 @@ const UploadInterface = ({ onBack, onComplete }: { onBack: () => void, onComplet
     );
 };
 
-const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: () => void }) => {
+const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
   const { userData, setUserData } = useCaptureStore();
   const { user } = useAuth();
   const [error, setError] = useState<string | null>(null);
@@ -174,55 +244,51 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-      <div className="w-full max-w-md space-y-8">
-        {onBack && (
-          <Link to="/" className="text-white/60 hover:text-white mb-4 inline-block">← Back</Link>
-        )}
-        <div className="text-center">
-          <div className="w-16 h-16 bg-emerald-500 rounded-full mx-auto mb-6 flex items-center justify-center text-2xl">📋</div>
-          <h1 className="text-3xl font-bold">Profile Setup</h1>
-          <p className="text-white/60 mt-2">Enter your metrics for accurate analysis</p>
+    <div className="w-full">
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 sm:p-8">
+        <div className="text-center mb-8">
+          <h1 className="text-xl font-semibold text-slate-900">Profile Setup</h1>
+          <p className="text-slate-500 text-sm mt-1">Enter your metrics for accurate analysis</p>
         </div>
 
         {error && (
-            <div className="p-4 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-sm text-center">
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm text-center">
                 {error}
             </div>
         )}
 
-<form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4">
                 <div>
-                    <label className="block text-sm font-medium text-white/60 mb-2">Full Name</label>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">Full Name</label>
                     <input 
                         type="text" 
                         required
                         value={displayName}
                         onChange={e => handleNameChange(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         placeholder="John Doe"
                     />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Age</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Age</label>
                         <input 
                             type="number" 
                             required
                             min="10" max="100"
                             value={displayAge}
                             onChange={e => handleAgeChange(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                             placeholder="25"
                         />
                     </div>
                      <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Gender</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Gender</label>
                         <select 
                             value={displayGender}
                             onChange={e => handleGenderChange(e.target.value as 'male' | 'female')}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         >
                             <option value="male">Male</option>
                             <option value="female">Female</option>
@@ -231,37 +297,37 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Height (cm)</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Height (cm)</label>
                         <input 
                             type="number" 
                             required
                             min="100" max="250"
                             value={userData.height}
                             onChange={e => setUserData({ height: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                             placeholder="175"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Weight (kg)</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Weight (kg)</label>
                         <input 
                             type="number" 
                             required
                             min="30" max="200"
                             value={userData.weight}
                             onChange={e => setUserData({ weight: e.target.value })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                             placeholder="70"
                         />
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">What's Your Goal?</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">What's Your Goal?</label>
                         <select 
                             value={userData.goal}
                             onChange={e => setUserData({ goal: e.target.value as 'weight_loss' | 'weight_gain' | 'maintenance' })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         >
                             <option value="weight_loss">Weight Loss</option>
                             <option value="weight_gain">Weight Gain</option>
@@ -269,11 +335,11 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Activity Level</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Activity Level</label>
                         <select 
                             value={userData.activityLevel}
                             onChange={e => setUserData({ activityLevel: e.target.value as 'sedentary' | 'light' | 'moderate' | 'heavy' })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         >
                             <option value="sedentary">Sedentary</option>
                             <option value="light">Lightly Active</option>
@@ -284,11 +350,11 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Fitness Level</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Fitness Level</label>
                         <select 
                             value={userData.exerciseComplexity}
                             onChange={e => setUserData({ exerciseComplexity: e.target.value as 'beginner' | 'intermediate' | 'hard' })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         >
                             <option value="beginner">Beginner</option>
                             <option value="intermediate">Intermediate</option>
@@ -296,11 +362,11 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
                         </select>
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-white/60 mb-2">Workout Preference</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Workout Preference</label>
                         <select 
                             value={userData.exerciseType}
                             onChange={e => setUserData({ exerciseType: e.target.value as 'bodyweight' | 'gym' })}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-emerald-500 focus:outline-none transition-colors appearance-none"
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
                         >
                             <option value="bodyweight">Bodyweight Only</option>
                             <option value="gym">Gym Equipment</option>
@@ -311,9 +377,9 @@ const SetupForm = ({ onComplete, onBack }: { onComplete: () => void; onBack?: ()
 
             <button
                 type="submit"
-                className="w-full bg-emerald-500 text-black font-bold py-4 rounded-xl hover:bg-emerald-400 transition-colors shadow-lg shadow-emerald-500/20"
+                className="w-full bg-teal-600 text-white font-medium py-3 rounded-xl hover:bg-teal-700 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-                Continue
+                Next <Icons.ChevronRight />
             </button>
         </form>
       </div>
@@ -368,30 +434,28 @@ const MethodSelection = ({
     }, [loadDevices]);
 
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center p-6">
-            <div className="w-full max-w-lg space-y-8">
-                <button onClick={onBack} className="text-white/60 hover:text-white mb-4">← Back</button>
-                
+        <div className="w-full">
+            <div className="space-y-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold">Choose Method</h1>
-                    <p className="text-white/60 mt-2">Select how you want to provide images</p>
+                    <h1 className="text-xl font-semibold text-slate-900">Choose Method</h1>
+                    <p className="text-slate-500 text-sm mt-1">Select how you want to provide images</p>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Camera Option */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-colors">
-                        <div className="text-4xl mb-4">📸</div>
-                        <h3 className="text-xl font-bold mb-2">Live Camera</h3>
-                        <p className="text-sm text-white/60 mb-6">Capture photos using your device camera.</p>
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md hover:border-teal-200 transition-all">
+                        <div className="text-teal-600 mb-4"><Icons.Camera /></div>
+                        <h3 className="text-lg font-semibold text-slate-900 mb-2">Live Camera</h3>
+                        <p className="text-sm text-slate-500 mb-6">Capture photos using your device camera.</p>
                         
                         {loading ? (
-                            <div className="text-sm text-white/40">Loading cameras...</div>
+                            <div className="text-sm text-slate-400">Loading cameras...</div>
                         ) : (
                             <div className="space-y-4">
                                 <select 
                                     value={selectedDevice}
                                     onChange={(e) => setSelectedDevice(e.target.value)}
-                                    className="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white"
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none"
                                 >
                                     {devices.map(d => (
                                         <option key={d.deviceId} value={d.deviceId}>
@@ -402,14 +466,14 @@ const MethodSelection = ({
                                 <div className="flex gap-2">
                                     <button 
                                         onClick={loadDevices}
-                                        className="bg-white/10 text-white px-3 py-2 rounded-lg hover:bg-white/20 transition-colors"
+                                        className="bg-slate-100 text-slate-600 px-3 py-2 rounded-lg hover:bg-slate-200 transition-colors"
                                         title="Refresh Camera List"
                                     >
-                                        🔄
+                                        <Icons.Refresh />
                                     </button>
                                     <button 
                                         onClick={() => onCameraSelect(selectedDevice)}
-                                        className="flex-1 bg-emerald-500 text-black font-bold py-2 rounded-lg hover:bg-emerald-400"
+                                        className="flex-1 bg-teal-600 text-white font-medium py-2 rounded-lg hover:bg-teal-700 transition-colors"
                                     >
                                         Start Camera
                                     </button>
@@ -419,19 +483,25 @@ const MethodSelection = ({
                     </div>
 
                     {/* Upload Option */}
-                    <div className="bg-white/5 border border-white/10 rounded-2xl p-6 hover:bg-white/10 transition-colors flex flex-col justify-between">
+                    <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 hover:shadow-md hover:border-teal-200 transition-all flex flex-col justify-between">
                         <div>
-                            <div className="text-4xl mb-4">📁</div>
-                            <h3 className="text-xl font-bold mb-2">Upload File</h3>
-                            <p className="text-sm text-white/60">Upload existing photos from your device.</p>
+                            <div className="text-teal-600 mb-4"><Icons.Upload /></div>
+                            <h3 className="text-lg font-semibold text-slate-900 mb-2">Upload File</h3>
+                            <p className="text-sm text-slate-500">Upload existing photos from your device.</p>
                         </div>
                         <button 
                             onClick={onUploadSelect}
-                            className="w-full bg-white/10 text-white font-bold py-2 rounded-lg hover:bg-white/20 mt-6"
+                            className="w-full bg-slate-100 text-slate-700 font-medium py-2 rounded-lg hover:bg-slate-200 mt-6 transition-colors"
                         >
                             Upload Photos
                         </button>
                     </div>
+                </div>
+
+                <div className="flex justify-center">
+                    <button onClick={onBack} className="text-slate-500 hover:text-slate-900 font-medium text-sm flex items-center gap-1">
+                        <Icons.Back /> Back
+                    </button>
                 </div>
             </div>
         </div>
@@ -645,41 +715,156 @@ export function CapturePage() {
 
   if (step === 'preview') {
     return (
-      <div className="min-h-screen bg-black text-white">
-        <header className="fixed top-0 left-0 right-0 bg-black/50 backdrop-blur-md z-50 border-b border-white/10">
-            <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                <Link to="/" className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
-                    <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-                    SomaLens
-                </Link>
-                <div className="text-xs font-bold uppercase tracking-widest text-white/50">
-                    Review Mode
-                </div>
-            </div>
-        </header>
-        <div className="pt-20 h-screen">
+      <div className="min-h-screen bg-slate-50">
+        <SimpleNav />
+        <div className="pt-8 h-screen">
             <CapturePreview />
         </div>
       </div>
     );
   }
 
-  if (capturePhase === 'setup') {
-      return <SetupForm onComplete={() => setCapturePhase('method')} onBack={() => {}} />;
-  }
-
-  if (capturePhase === 'method') {
+  if (capturePhase === 'capture') {
+      // Camera Capture UI (Reuse existing UI with teal accents)
       return (
-          <MethodSelection 
-              onCameraSelect={(deviceId) => {
-                  setSelectedDeviceId(deviceId);
-                  setCapturePhase('capture');
-              }}
-              onUploadSelect={() => {
-                  setCapturePhase('upload');
-              }}
-              onBack={() => setCapturePhase('setup')}
-          />
+        <div className="h-screen bg-black text-white flex flex-col overflow-hidden">
+          <header className="fixed top-0 left-0 right-0 z-50 px-6 py-6 flex justify-between items-start pointer-events-none">
+            <Link to="/dashboard" className="pointer-events-auto text-xl font-bold tracking-tight text-white flex items-center gap-2 drop-shadow-md">
+               <div className="w-3 h-3 bg-teal-500 rounded-full" />
+               SomaLens
+            </Link>
+            
+            <div className="flex flex-col items-end gap-2">
+                <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 flex items-center gap-3 shadow-xl">
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${step === 'front' ? 'bg-teal-500 animate-pulse' : 'bg-white/20'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-widest ${step === 'front' ? 'text-white' : 'text-white/40'}`}>Front</span>
+                    </div>
+                    <div className="w-px h-3 bg-white/20" />
+                    <div className="flex items-center gap-2">
+                        <span className={`w-2 h-2 rounded-full ${step === 'side' ? 'bg-teal-500 animate-pulse' : 'bg-white/20'}`} />
+                        <span className={`text-xs font-bold uppercase tracking-widest ${step === 'side' ? 'text-white' : 'text-white/40'}`}>Side</span>
+                    </div>
+                </div>
+                 {/* Rotate Button */}
+                <button 
+                    onClick={handleRotate}
+                    className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+                >
+                    <Icons.Rotate /> Rotate
+                </button>
+                <button 
+                    onClick={toggleOrientation}
+                    className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+                >
+                    <Icons.Orientation /> {orientation === 'portrait' ? 'Landscape' : 'Portrait'}
+                </button>
+                {/* Added: Back Button to Method Selection */}
+                <button 
+                    onClick={() => setCapturePhase('method')}
+                    className="pointer-events-auto text-xs text-white/60 hover:text-white bg-black/20 px-3 py-1 rounded-full backdrop-blur-md"
+                >
+                    Change Method
+                </button>
+            </div>
+          </header>
+    
+          <main className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
+            <div 
+                className={`absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-150 ease-out ${isFlashing ? 'opacity-100' : 'opacity-0'}`} 
+            />
+    
+            {/* Video Container to handle rotation/scaling cleanly */}
+            <div 
+                className="relative transition-transform duration-300 ease-out"
+                style={{
+                    width: '100%',
+                    height: '100%',
+                    transform: `rotate(${rotation}deg)`
+                }}
+            >
+                <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
+                />
+            </div>
+    
+            {countdown !== null && countdown > 0 && (
+                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
+                    <div className="text-[12rem] font-black text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.5)] animate-bounce">
+                        {countdown}
+                    </div>
+                </div>
+            )}
+    
+            <div className={`transition-opacity duration-500 ${countdown !== null ? 'opacity-0' : 'opacity-100'}`}>
+                 <PoseGuide 
+                    landmarks={currentLandmarks}
+                    validationResult={validationResult}
+                    poseType={step}
+                 />
+            </div>
+    
+            {(cameraError || mediapipeError || mediapipeLoading || !isReady || !hasCamera) && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black z-40">
+                 <div className="flex flex-col items-center gap-6 p-8">
+                     {cameraError || mediapipeError ? (
+                         <>
+                            <div className="w-16 h-16 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center text-3xl mb-2">!</div>
+                            <p className="text-xl font-bold text-rose-400">{cameraError || mediapipeError}</p>
+                         </>
+                     ) : (
+                        <>
+                            <div className="w-16 h-16 border-4 border-teal-500/30 border-t-teal-500 rounded-full animate-spin" />
+                            <div className="text-center">
+                                <p className="text-lg font-bold tracking-tight mb-1">Initializing System</p>
+                                <p className="text-sm text-white/40 uppercase tracking-widest">Loading Neural Networks</p>
+                            </div>
+                        </>
+                     )}
+                 </div>
+              </div>
+            )}
+    
+            <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/60 to-transparent z-30 flex flex-col items-center">
+                 <div className="mb-8 text-center space-y-2">
+                     <h2 className="text-3xl font-bold tracking-tight drop-shadow-lg">
+                        {step === 'front' ? 'Frontal Scan' : 'Profile Scan'}
+                     </h2>
+                     <p className="text-white/60 font-medium drop-shadow-md max-w-sm mx-auto">
+                        {step === 'front' 
+                          ? 'Align your body within the frame. Keep arms relaxed.' 
+                          : 'Turn 90 degrees. Ensure your full profile is visible.'}
+                     </p>
+                 </div>
+    
+                 <button
+                   onClick={handleCaptureClick}
+                   disabled={!validationResult?.isValid || countdown !== null}
+                   className={`
+                     group relative w-24 h-24 rounded-full border border-white/20 flex items-center justify-center transition-all duration-300
+                     ${validationResult?.isValid 
+                       ? 'bg-white/10 hover:bg-white/20 scale-100 cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.1)]' 
+                       : 'bg-black/50 opacity-50 scale-95 cursor-not-allowed'}
+                   `}
+                 >
+                    {validationResult?.isValid && (
+                        <div className="absolute inset-0 rounded-full border border-white/50 animate-ping opacity-20" />
+                    )}
+                    
+                    <div className={`
+                        w-16 h-16 rounded-full transition-all duration-300 shadow-lg
+                        ${validationResult?.isValid 
+                            ? 'bg-white scale-100 group-hover:scale-95' 
+                            : 'bg-white/20 scale-90'}
+                    `} />
+                 </button>
+            </div>
+          </main>
+        </div>
       );
   }
 
@@ -692,143 +877,36 @@ export function CapturePage() {
       );
   }
 
-  // Camera Capture UI (Reuse existing UI)
+  // Setup and Method phases - slider within white layout
   return (
-    <div className="h-screen bg-black text-white flex flex-col overflow-hidden">
-      <header className="fixed top-0 left-0 right-0 z-50 px-6 py-6 flex justify-between items-start pointer-events-none">
-        <Link to="/" className="pointer-events-auto text-xl font-bold tracking-tight text-white flex items-center gap-2 drop-shadow-md">
-           <div className="w-3 h-3 bg-emerald-500 rounded-full" />
-           SomaLens
-        </Link>
+    <div className="min-h-screen bg-slate-50">
+      <SimpleNav />
+      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        <StepIndicator currentPhase={capturePhase as 'setup' | 'method'} />
         
-        <div className="flex flex-col items-end gap-2">
-            <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 flex items-center gap-3 shadow-xl">
-                <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${step === 'front' ? 'bg-emerald-500 animate-pulse' : 'bg-white/20'}`} />
-                    <span className={`text-xs font-bold uppercase tracking-widest ${step === 'front' ? 'text-white' : 'text-white/40'}`}>Front</span>
-                </div>
-                <div className="w-px h-3 bg-white/20" />
-                <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full ${step === 'side' ? 'bg-emerald-500 animate-pulse' : 'bg-white/20'}`} />
-                    <span className={`text-xs font-bold uppercase tracking-widest ${step === 'side' ? 'text-white' : 'text-white/40'}`}>Side</span>
-                </div>
+        <div className="overflow-hidden">
+          <div 
+            className="flex transition-transform duration-500 ease-in-out"
+            style={{ transform: `translateX(-${capturePhase === 'method' ? 100 : 0}%)` }}
+          >
+            {/* Panel 1: SetupForm - width: 100% */}
+            <div className="w-full flex-shrink-0 px-px">
+              <SetupForm onComplete={() => setCapturePhase('method')} />
             </div>
-             {/* Rotate Button */}
-            <button 
-                onClick={handleRotate}
-                className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
-            >
-                <span>🔄</span> Rotate
-            </button>
-            <button 
-                onClick={toggleOrientation}
-                className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
-            >
-                <span>↔️</span> {orientation === 'portrait' ? 'Landscape' : 'Portrait'}
-            </button>
-            {/* Added: Back Button to Method Selection */}
-            <button 
-                onClick={() => setCapturePhase('method')}
-                className="pointer-events-auto text-xs text-white/60 hover:text-white bg-black/20 px-3 py-1 rounded-full backdrop-blur-md"
-            >
-                Change Method
-            </button>
-        </div>
-      </header>
-
-      <main className="flex-1 relative bg-black flex items-center justify-center overflow-hidden">
-        <div 
-            className={`absolute inset-0 bg-white z-[60] pointer-events-none transition-opacity duration-150 ease-out ${isFlashing ? 'opacity-100' : 'opacity-0'}`} 
-        />
-
-        {/* Video Container to handle rotation/scaling cleanly */}
-        <div 
-            className="relative transition-transform duration-300 ease-out"
-            style={{
-                width: '100%',
-                height: '100%',
-                transform: `rotate(${rotation}deg)`
-            }}
-        >
-            <video
-            ref={videoRef}
-            autoPlay
-            playsInline
-            muted
-            className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
-            />
-        </div>
-
-        {countdown !== null && countdown > 0 && (
-            <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                <div className="text-[12rem] font-black text-white drop-shadow-[0_0_50px_rgba(255,255,255,0.5)] animate-bounce">
-                    {countdown}
-                </div>
+            {/* Panel 2: MethodSelection - width: 100% */}
+            <div className="w-full flex-shrink-0 px-px">
+              <MethodSelection 
+                  onCameraSelect={(deviceId) => {
+                      setSelectedDeviceId(deviceId);
+                      setCapturePhase('capture');
+                  }}
+                  onUploadSelect={() => {
+                      setCapturePhase('upload');
+                  }}
+                  onBack={() => setCapturePhase('setup')}
+              />
             </div>
-        )}
-
-        <div className={`transition-opacity duration-500 ${countdown !== null ? 'opacity-0' : 'opacity-100'}`}>
-             <PoseGuide 
-                landmarks={currentLandmarks}
-                validationResult={validationResult}
-                poseType={step}
-             />
-        </div>
-
-        {(cameraError || mediapipeError || mediapipeLoading || !isReady || !hasCamera) && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black z-40">
-             <div className="flex flex-col items-center gap-6 p-8">
-                 {cameraError || mediapipeError ? (
-                     <>
-                        <div className="w-16 h-16 rounded-full bg-rose-500/20 text-rose-500 flex items-center justify-center text-3xl mb-2">!</div>
-                        <p className="text-xl font-bold text-rose-400">{cameraError || mediapipeError}</p>
-                     </>
-                 ) : (
-                    <>
-                        <div className="w-16 h-16 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                        <div className="text-center">
-                            <p className="text-lg font-bold tracking-tight mb-1">Initializing System</p>
-                            <p className="text-sm text-white/40 uppercase tracking-widest">Loading Neural Networks</p>
-                        </div>
-                    </>
-                 )}
-             </div>
           </div>
-        )}
-
-        <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/60 to-transparent z-30 flex flex-col items-center">
-             <div className="mb-8 text-center space-y-2">
-                 <h2 className="text-3xl font-bold tracking-tight drop-shadow-lg">
-                    {step === 'front' ? 'Frontal Scan' : 'Profile Scan'}
-                 </h2>
-                 <p className="text-white/60 font-medium drop-shadow-md max-w-sm mx-auto">
-                    {step === 'front' 
-                      ? 'Align your body within the frame. Keep arms relaxed.' 
-                      : 'Turn 90 degrees. Ensure your full profile is visible.'}
-                 </p>
-             </div>
-
-             <button
-               onClick={handleCaptureClick}
-               disabled={!validationResult?.isValid || countdown !== null}
-               className={`
-                 group relative w-24 h-24 rounded-full border border-white/20 flex items-center justify-center transition-all duration-300
-                 ${validationResult?.isValid 
-                   ? 'bg-white/10 hover:bg-white/20 scale-100 cursor-pointer shadow-[0_0_40px_rgba(255,255,255,0.1)]' 
-                   : 'bg-black/50 opacity-50 scale-95 cursor-not-allowed'}
-               `}
-             >
-                {validationResult?.isValid && (
-                    <div className="absolute inset-0 rounded-full border border-white/50 animate-ping opacity-20" />
-                )}
-                
-                <div className={`
-                    w-16 h-16 rounded-full transition-all duration-300 shadow-lg
-                    ${validationResult?.isValid 
-                        ? 'bg-white scale-100 group-hover:scale-95' 
-                        : 'bg-white/20 scale-90'}
-                `} />
-             </button>
         </div>
       </main>
     </div>
