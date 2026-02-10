@@ -4,7 +4,6 @@ import { api } from '../services/api';
 import type { AnalysisResponse } from '../services/api';
 import type { MeasurementSession } from '../types/pose';
 import { SKINFOLD_KEYS, BREADTH_KEYS, GIRTH_KEYS, ADDITIONAL_GIRTH_KEYS } from '../types/pose';
-import ProgressChart from '../components/ProgressChart';
 import AppNavbar from '../components/AppNavbar';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -88,6 +87,26 @@ export function HistoryPage() {
     return key.replace(/_/g, ' ').replace(/([A-Z])/g, ' $1').trim();
   };
 
+  // Stats Calculations
+  const totalScans = history.length;
+  
+  const scansThisWeek = history.filter(session => {
+    const date = new Date(session.created_at);
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+    return diffDays <= 7;
+  }).length;
+
+  const latestScan = history[0];
+  const latestDate = latestScan 
+    ? new Date(latestScan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : "No scans yet";
+
+  const latestBMI = latestScan && latestScan.weight && latestScan.height
+    ? (latestScan.weight / Math.pow(latestScan.height / 100, 2)).toFixed(1)
+    : "-";
+
   if (loading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
@@ -134,12 +153,66 @@ export function HistoryPage() {
             </div>
           ) : (
             <div className="space-y-8">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
-                <h3 className="text-lg font-bold text-slate-900 mb-6 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
-                  Trends
-                </h3>
-                <ProgressChart sessions={history} />
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Total Scans */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="20" x2="18" y2="10"></line>
+                      <line x1="12" y1="20" x2="12" y2="4"></line>
+                      <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 font-medium">Total Scans</p>
+                    <p className="text-2xl font-bold text-slate-900">{totalScans}</p>
+                  </div>
+                </div>
+
+                {/* Scans This Week */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 font-medium">This Week</p>
+                    <p className="text-2xl font-bold text-slate-900">{scansThisWeek}</p>
+                  </div>
+                </div>
+
+                {/* Latest Scan */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 font-medium">Latest Scan</p>
+                    <p className="text-lg font-bold text-slate-900">{latestDate}</p>
+                  </div>
+                </div>
+
+                {/* BMI */}
+                <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                    <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                      <circle cx="12" cy="7" r="4"></circle>
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-500 font-medium">Latest BMI</p>
+                    <p className="text-2xl font-bold text-slate-900">{latestBMI}</p>
+                  </div>
+                </div>
               </div>
 
               <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -187,16 +260,27 @@ export function HistoryPage() {
                           <td className="px-6 py-4 text-right space-x-2">
                             <button
                               onClick={() => setSelectedSession(selectedSession?.id === session.id ? null : session)}
-                              className="text-sm font-bold text-teal-600 hover:text-teal-700 transition-colors"
+                              className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors"
+                              title="View Details"
                             >
-                              {selectedSession?.id === session.id ? 'Hide Details' : 'Details'}
+                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                              </svg>
                             </button>
                             <button
                               onClick={() => handleViewDetails(session)}
                               disabled={!session.somatotype_class}
-                              className="text-sm font-bold text-teal-600 hover:text-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="p-2 rounded-lg text-slate-400 hover:text-teal-600 hover:bg-teal-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                              title="Full Report"
                             >
-                              Full Report →
+                              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                              </svg>
                             </button>
                           </td>
                         </tr>
@@ -217,11 +301,32 @@ export function HistoryPage() {
                       onClick={() => setSelectedSession(null)}
                       className="text-slate-400 hover:text-slate-600"
                     >
-                      ✕
+                      <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
                     </button>
                   </div>
 
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Summary Row */}
+                  <div className="flex flex-wrap gap-3 mb-8 pb-6 border-b border-slate-100">
+                    <div className="px-4 py-2 bg-slate-50 rounded-full border border-slate-200 text-sm font-medium text-slate-700">
+                      Height: <span className="font-bold text-slate-900">{selectedSession.height ? `${selectedSession.height} cm` : '-'}</span>
+                    </div>
+                    <div className="px-4 py-2 bg-slate-50 rounded-full border border-slate-200 text-sm font-medium text-slate-700">
+                      Weight: <span className="font-bold text-slate-900">{selectedSession.weight ? `${selectedSession.weight} kg` : '-'}</span>
+                    </div>
+                    <div className="px-4 py-2 bg-slate-50 rounded-full border border-slate-200 text-sm font-medium text-slate-700">
+                      Body Fat: <span className="font-bold text-slate-900">{selectedSession.body_fat_percentage ? `${selectedSession.body_fat_percentage}%` : '-'}</span>
+                    </div>
+                    <div className="px-4 py-2 bg-slate-50 rounded-full border border-slate-200 text-sm font-medium text-slate-700">
+                      Somatotype: <span className="font-bold text-slate-900">
+                        {selectedSession.somatotype_endo?.toFixed(1)} - {selectedSession.somatotype_meso?.toFixed(1)} - {selectedSession.somatotype_ecto?.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-4">
                       <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Images</h4>
                       <div className="grid grid-cols-2 gap-4">
@@ -253,19 +358,18 @@ export function HistoryPage() {
                       </div>
                     </div>
 
-                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <h4 className="text-sm font-bold text-rose-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500"/>
+                    <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="bg-rose-50/30 rounded-xl p-5 border-l-4 border-rose-500 shadow-sm">
+                        <h4 className="text-sm font-bold text-rose-700 uppercase tracking-wider mb-4">
                           Skinfolds (mm)
                         </h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {SKINFOLD_KEYS.map(key => {
                             const value = selectedSession.circumferences?.[key];
                             return (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-slate-500">{formatKey(key)}</span>
-                                <span className="text-slate-900 font-mono">
+                              <div key={key} className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">{formatKey(key)}</span>
+                                <span className="text-base font-bold text-slate-900 font-mono">
                                   {value !== undefined ? value.toFixed(1) : '-'}
                                 </span>
                               </div>
@@ -274,18 +378,17 @@ export function HistoryPage() {
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <h4 className="text-sm font-bold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-blue-500"/>
+                      <div className="bg-blue-50/30 rounded-xl p-5 border-l-4 border-blue-500 shadow-sm">
+                        <h4 className="text-sm font-bold text-blue-700 uppercase tracking-wider mb-4">
                           Breadths (cm)
                         </h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {BREADTH_KEYS.map(key => {
                             const value = selectedSession.circumferences?.[key];
                             return (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-slate-500">{formatKey(key)}</span>
-                                <span className="text-slate-900 font-mono">
+                              <div key={key} className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">{formatKey(key)}</span>
+                                <span className="text-base font-bold text-slate-900 font-mono">
                                   {value !== undefined ? value.toFixed(1) : '-'}
                                 </span>
                               </div>
@@ -294,18 +397,17 @@ export function HistoryPage() {
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <h4 className="text-sm font-bold text-purple-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-500"/>
+                      <div className="bg-purple-50/30 rounded-xl p-5 border-l-4 border-purple-500 shadow-sm">
+                        <h4 className="text-sm font-bold text-purple-700 uppercase tracking-wider mb-4">
                           Girths (cm)
                         </h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {GIRTH_KEYS.map(key => {
                             const value = selectedSession.circumferences?.[key];
                             return (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-slate-500">{formatKey(key)}</span>
-                                <span className="text-slate-900 font-mono">
+                              <div key={key} className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">{formatKey(key)}</span>
+                                <span className="text-base font-bold text-slate-900 font-mono">
                                   {value !== undefined ? value.toFixed(1) : '-'}
                                 </span>
                               </div>
@@ -314,18 +416,17 @@ export function HistoryPage() {
                         </div>
                       </div>
 
-                      <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                        <h4 className="text-sm font-bold text-amber-600 uppercase tracking-wider mb-3 flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"/>
+                      <div className="bg-amber-50/30 rounded-xl p-5 border-l-4 border-amber-500 shadow-sm">
+                        <h4 className="text-sm font-bold text-amber-700 uppercase tracking-wider mb-4">
                           Additional Girths (cm)
                         </h4>
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {ADDITIONAL_GIRTH_KEYS.map(key => {
                             const value = selectedSession.circumferences?.[key];
                             return (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-slate-500">{formatKey(key)}</span>
-                                <span className="text-slate-900 font-mono">
+                              <div key={key} className="flex justify-between items-center">
+                                <span className="text-sm text-slate-600">{formatKey(key)}</span>
+                                <span className="text-base font-bold text-slate-900 font-mono">
                                   {value !== undefined ? value.toFixed(1) : '-'}
                                 </span>
                               </div>
