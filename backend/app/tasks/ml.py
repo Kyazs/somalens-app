@@ -7,6 +7,7 @@ Orchestrates the full pipeline:
 3. Ultra V3 Prediction (SVR+RF+Calibration)
 4. Measurement Averaging
 5. Heath-Carter Calculation
+6. Body Fat Estimation (Durnin-Womersley + CUN-BAE)
 """
 
 import os
@@ -21,6 +22,7 @@ from app.database import engine
 from sqlmodel import Session
 from app.models.measurement import Measurement
 from app.services.somatotype import calculate_heath_carter, classify_somatotype
+from app.services.body_fat import estimate_body_fat
 
 from app.utils.segmentation import DeepLabV3Segmenter
 from app.utils.scale_normalization import normalize_silhouette_scale
@@ -312,6 +314,17 @@ def process_measurement(measurement_id: int):
             calf_girth_cm=final_measurements['Calf_Circumference']
         )
         
+        # PIPELINE STEP 6: Estimate Body Fat Percentage
+        body_fat_result = estimate_body_fat(
+            triceps_mm=final_measurements['Triceps_Skinfold'],
+            subscapular_mm=final_measurements['Subscapular_Skinfold'],
+            supraspinale_mm=final_measurements['Supraspinale_Skinfold'],
+            height_cm=height_cm,
+            weight_kg=weight_kg,
+            age=age,
+            gender=gender,
+        )
+        
         # Update DB
         measurement.somatotype_endo = somato['endomorphy']
         measurement.somatotype_meso = somato['mesomorphy']
@@ -323,6 +336,9 @@ def process_measurement(measurement_id: int):
             measurement.somatotype_ecto
         )
         
+        # Set body fat percentage on the model field
+        measurement.body_fat_percentage = body_fat_result['body_fat_percentage']
+        
         # Save all intermediate data
         if not measurement.circumferences:
             measurement.circumferences = {}
@@ -331,8 +347,13 @@ def process_measurement(measurement_id: int):
         measurement.circumferences.update(final_measurements)
         measurement.circumferences.update(somato)
         
+        # Store body fat estimates in circumferences dict for frontend access
+        measurement.circumferences['Body_Fat_Percentage'] = body_fat_result['body_fat_percentage']
+        measurement.circumferences['Body_Fat_DW'] = body_fat_result['body_fat_dw']
+        measurement.circumferences['Body_Fat_CUN_BAE'] = body_fat_result['body_fat_cun_bae']
+        
         session.add(measurement)
         session.commit()
         session.refresh(measurement)
         
-        return f"Successfully processed measurement {measurement_id}. Class: {measurement.somatotype_class}"
+        return f"Successfully processed measurement {measurement_id}. Class: {measurement.somatotype_class}, Body Fat: {measurement.body_fat_percentage}%"

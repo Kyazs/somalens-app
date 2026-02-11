@@ -119,8 +119,8 @@ export function HistoryPage() {
     ? new Date(latestScan.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     : "No scans yet";
 
-  const latestBMI = latestScan && latestScan.weight && latestScan.height
-    ? (latestScan.weight / Math.pow(latestScan.height / 100, 2)).toFixed(1)
+  const latestBodyFat = latestScan?.body_fat_percentage
+    ? `${latestScan.body_fat_percentage}%`
     : "-";
 
   if (loading) {
@@ -216,7 +216,7 @@ export function HistoryPage() {
                   </div>
                 </div>
 
-                {/* BMI */}
+                {/* Body Fat */}
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex items-center gap-4">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                     <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -225,8 +225,8 @@ export function HistoryPage() {
                     </svg>
                   </div>
                   <div>
-                    <p className="text-sm text-slate-500 font-medium">Latest BMI</p>
-                    <p className="text-2xl font-bold text-slate-900">{latestBMI}</p>
+                    <p className="text-sm text-slate-500 font-medium">Latest Body Fat</p>
+                    <p className="text-2xl font-bold text-slate-900">{latestBodyFat}</p>
                   </div>
                 </div>
               </div>
