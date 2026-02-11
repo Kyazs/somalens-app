@@ -48,6 +48,15 @@ def load_exercises() -> dict:
     return _exercises_cache
 
 
+def _normalize_somatotype_key(somatotype: str) -> str:
+    mapping = {
+        "endomorph-mesomorph": "endo_meso",
+        "mesomorph-ectomorph": "meso_ecto",
+        "endomorph-ectomorph": "endo_ecto",
+    }
+    return mapping.get(somatotype.lower(), somatotype.lower())
+
+
 def get_template(
     somatotype: str,
     gender: str,
@@ -58,7 +67,7 @@ def get_template(
 ) -> Optional[dict]:
     templates = load_recommendation_templates()
     key = (
-        somatotype.lower(),
+        _normalize_somatotype_key(somatotype),
         gender.lower(),
         goal.lower(),
         activity_level.lower(),

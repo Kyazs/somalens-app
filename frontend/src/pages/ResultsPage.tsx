@@ -154,7 +154,7 @@ export function ResultsPage() {
       exerciseComplexity: {
         beginner: 'Beginner',
         intermediate: 'Intermediate',
-        advanced: 'Advanced',
+        hard: 'Advanced',
       },
       exerciseType: {
         gym: 'Gym',
