@@ -17,7 +17,6 @@ export default function AppNavbar() {
 
   const navLinks = [
     { name: 'Dashboard', path: '/dashboard' },
-    { name: 'Scan', path: '/capture' },
     { name: 'History', path: '/history' },
     { name: 'Profile', path: '/profile' },
   ];
@@ -46,6 +45,17 @@ export default function AppNavbar() {
                 {link.name}
               </Link>
             ))}
+            <Link
+              to="/capture"
+              className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                isActive('/capture')
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-teal-500 text-white hover:bg-teal-600 shadow-sm'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              Scan
+            </Link>
             <button
               onClick={handleLogout}
               className="px-4 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 transition-all text-sm font-medium cursor-pointer"
@@ -116,6 +126,18 @@ export default function AppNavbar() {
                 {link.name}
               </Link>
             ))}
+            <Link
+              to="/capture"
+              onClick={() => setMobileOpen(false)}
+              className={`mx-4 mt-3 inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all text-center cursor-pointer ${
+                isActive('/capture')
+                  ? 'bg-teal-600 text-white shadow-sm'
+                  : 'bg-teal-500 text-white hover:bg-teal-600 shadow-sm'
+              }`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              Scan
+            </Link>
             <button
               onClick={() => {
                 setMobileOpen(false);
