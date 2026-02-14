@@ -23,6 +23,20 @@ const Icons = {
   Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 };
 
+// --- Camera Helpers ---
+
+/** Infer facingMode from device label to determine video mirroring */
+function inferFacingMode(label: string): 'user' | 'environment' | null {
+  const lower = label.toLowerCase();
+  if (lower.includes('front') || lower.includes('user') || lower.includes('selfie') || lower.includes('facetime')) {
+    return 'user';
+  }
+  if (lower.includes('back') || lower.includes('rear') || lower.includes('environment') || lower.includes('main')) {
+    return 'environment';
+  }
+  return null;
+}
+
 // --- Helper Components ---
 
 const SimpleNav = () => (
@@ -392,7 +406,7 @@ const MethodSelection = ({
     onUploadSelect,
     onBack 
 }: { 
-    onCameraSelect: (deviceId: string) => void;
+    onCameraSelect: (deviceId: string, facingMode: 'user' | 'environment' | null) => void;
     onUploadSelect: () => void;
     onBack: () => void;
 }) => {
@@ -403,7 +417,10 @@ const MethodSelection = ({
     const loadDevices = useCallback(async () => {
         setLoading(true);
         try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
+            // Request permission to access labels, then immediately release the stream
+            // so it doesn't interfere with the actual camera selection later.
+            const permissionStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            permissionStream.getTracks().forEach(track => track.stop());
             
             const devs = await navigator.mediaDevices.enumerateDevices();
 
@@ -472,7 +489,11 @@ const MethodSelection = ({
                                         <Icons.Refresh />
                                     </button>
                                     <button 
-                                        onClick={() => onCameraSelect(selectedDevice)}
+                                        onClick={() => {
+                                            const dev = devices.find(d => d.deviceId === selectedDevice);
+                                            const facingMode = dev ? inferFacingMode(dev.label) : null;
+                                            onCameraSelect(selectedDevice, facingMode);
+                                        }}
                                         className="flex-1 bg-teal-600 text-white font-medium py-2 rounded-lg hover:bg-teal-700 transition-colors"
                                     >
                                         Start Camera
@@ -517,6 +538,7 @@ export function CapturePage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturePhase, setCapturePhase] = useState<'setup' | 'method' | 'capture' | 'upload'>('setup');
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [selectedFacingMode, setSelectedFacingMode] = useState<'user' | 'environment' | null>(null);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [rotation, setRotation] = useState(0);
 
@@ -556,17 +578,18 @@ export function CapturePage() {
 
     async function startCamera() {
       try {
-        const constraints = {
-            video: {
-                deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-                width: orientation === 'portrait' ? { ideal: 1080 } : { ideal: 1920 },
-                height: orientation === 'portrait' ? { ideal: 1920 } : { ideal: 1080 },
-                aspectRatio: orientation === 'portrait' ? { ideal: 0.5625 } : { ideal: 1.7777777778 },
-                // @ts-ignore - zoom is not in standard types yet but supported in Chrome
-                advanced: [{ zoom: 1 } as any]
-            }
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        // Use deviceId for all cameras with orientation-based dimension hints.
+        // On mobile, browsers may ignore dimension hints — user can use the
+        // Portrait/Landscape toggle and Rotate button to adjust manually.
+        const portraitWanted = orientation === 'portrait';
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+            width: { ideal: portraitWanted ? 1080 : 1920 },
+            height: { ideal: portraitWanted ? 1920 : 1080 },
+            aspectRatio: { ideal: portraitWanted ? 0.5625 : 1.7777777778 },
+          }
+        });
         streamRef.current = stream;
 
         if (videoRef.current) {
@@ -805,7 +828,7 @@ export function CapturePage() {
                 </button>
                 <button 
                     onClick={toggleOrientation}
-                    className="hidden md:flex pointer-events-auto items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+                    className="flex pointer-events-auto items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
                 >
                     <Icons.Orientation /> {orientation === 'portrait' ? 'Landscape' : 'Portrait'}
                 </button>
@@ -838,7 +861,7 @@ export function CapturePage() {
                 autoPlay
                 playsInline
                 muted
-                className="absolute inset-0 w-full h-full object-contain transform scale-x-[-1]"
+                className={`absolute inset-0 w-full h-full object-contain${selectedFacingMode !== 'environment' ? ' scale-x-[-1]' : ''}`}
                 />
             </div>
     
@@ -955,8 +978,9 @@ export function CapturePage() {
             {/* Panel 2: MethodSelection - width: 100% */}
             <div className="w-full flex-shrink-0 px-px">
               <MethodSelection 
-                  onCameraSelect={(deviceId) => {
+onCameraSelect={(deviceId, facingMode) => {
                       setSelectedDeviceId(deviceId);
+                      setSelectedFacingMode(facingMode);
                       setCapturePhase('capture');
                   }}
                   onUploadSelect={() => {
