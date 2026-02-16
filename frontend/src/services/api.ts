@@ -235,7 +235,7 @@ getMe: async (): Promise<UserResponse> => {
     sideImage: Blob, 
     age: number, 
     gender: 'male' | 'female',
-    heightCm: number,
+    heightCm: number | undefined,
     weightKg: number,
     name?: string
   ): Promise<AnalysisResponse> => {
@@ -244,7 +244,9 @@ getMe: async (): Promise<UserResponse> => {
     formData.append('side_image', sideImage, 'side.jpg');
     formData.append('age', age.toString());
     formData.append('gender', gender);
-    formData.append('height', heightCm.toString());
+    if (heightCm !== undefined && heightCm > 0) {
+      formData.append('height', heightCm.toString());
+    }
     formData.append('weight', weightKg.toString());
     if (name) formData.append('name', name);
 
@@ -269,16 +271,18 @@ getMe: async (): Promise<UserResponse> => {
   pollMeasurementUntilComplete: async (
     id: number, 
     onProgress?: (status: string) => void,
-    maxAttempts: number = 60,
-    intervalMs: number = 2000
+    maxAttempts: number = 120,
+    intervalMs: number = 5000
   ): Promise<MeasurementResponse> => {
     const progressMessages = [
       'Uploading images...',
       'Processing images...',
+      'Loading AI models...',
       'Extracting body measurements...',
       'Calculating somatotype...',
       'Analyzing body composition...',
-      'Finalizing results...'
+      'Finalizing results...',
+      'Still processing, please wait...',
     ];
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {

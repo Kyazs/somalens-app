@@ -12,6 +12,7 @@ interface CaptureState {
     height: string;
     weight: string;
     gender: 'male' | 'female';
+    heightMode: 'input' | 'predicted';
     goal: 'weight_loss' | 'weight_gain' | 'maintenance';
     activityLevel: 'sedentary' | 'light' | 'moderate' | 'heavy';
     exerciseComplexity: 'beginner' | 'intermediate' | 'hard';
@@ -38,6 +39,7 @@ export const useCaptureStore = create<CaptureState>((set) => ({
     height: '',
     weight: '',
     gender: 'male',
+    heightMode: 'input',
     goal: 'maintenance',
     activityLevel: 'moderate',
     exerciseComplexity: 'beginner',
@@ -58,6 +60,7 @@ export const useCaptureStore = create<CaptureState>((set) => ({
       height: '',
       weight: '',
       gender: 'male',
+      heightMode: 'input',
       goal: 'maintenance',
       activityLevel: 'moderate',
       exerciseComplexity: 'beginner',

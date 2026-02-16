@@ -237,17 +237,22 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
     }
     
     const age = parseInt(displayAge);
-    const height = parseInt(userData.height);
     const weight = parseInt(userData.weight);
 
     if (isNaN(age) || age < 10 || age > 100) {
       setError("Age must be between 10 and 100 years");
       return;
     }
-    if (isNaN(height) || height < 100 || height > 250) {
-      setError("Height must be between 100 and 250 cm");
-      return;
+    
+    // Only validate height when user chose to input it manually
+    if (userData.heightMode === 'input') {
+      const height = parseFloat(userData.height);
+      if (isNaN(height) || height < 100 || height > 250) {
+        setError("Height must be between 100 and 250 cm");
+        return;
+      }
     }
+    
     if (isNaN(weight) || weight < 30 || weight > 200) {
       setError("Weight must be between 30 and 200 kg");
       return;
@@ -310,17 +315,70 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                     </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-2">Height (cm)</label>
-                        <input 
-                            type="number" 
-                            required
-                            min="100" max="250"
-                            value={userData.height}
-                            onChange={e => setUserData({ height: e.target.value })}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
-                            placeholder="175"
-                        />
+                    <div className="col-span-2">
+                        <label className="block text-sm font-medium text-slate-700 mb-2">Height</label>
+                        {/* Segmented Toggle */}
+                        <div className="flex rounded-xl border border-slate-200 overflow-hidden mb-3">
+                            <button
+                                type="button"
+                                onClick={() => { setUserData({ heightMode: 'input' }); }}
+                                className={`flex-1 py-2.5 text-sm font-medium transition-all duration-200 ${
+                                    userData.heightMode === 'input'
+                                        ? 'bg-teal-600 text-white shadow-sm'
+                                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                                }`}
+                            >
+                                ✏️ Input Height
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => { setUserData({ heightMode: 'predicted', height: '' }); }}
+                                className={`flex-1 py-2.5 text-sm font-medium transition-all duration-200 border-l border-slate-200 ${
+                                    userData.heightMode === 'predicted'
+                                        ? 'bg-teal-600 text-white shadow-sm'
+                                        : 'bg-slate-50 text-slate-500 hover:bg-slate-100'
+                                }`}
+                            >
+                                🤖 Predict Height
+                            </button>
+                        </div>
+
+                        {/* Conditional Content */}
+                        {userData.heightMode === 'input' ? (
+                            <div>
+                                <label className="block text-xs font-medium text-slate-500 mb-1">Height (cm)</label>
+                                <input 
+                                    type="number" 
+                                    required
+                                    min="100" max="250"
+                                    step="0.1"
+                                    value={userData.height}
+                                    onChange={e => setUserData({ height: e.target.value })}
+                                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
+                                    placeholder="175.0"
+                                />
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                                <div className="flex items-start gap-3">
+                                    <span className="text-amber-500 text-lg mt-0.5">⚠️</span>
+                                    <div>
+                                        <p className="text-sm font-semibold text-amber-800 mb-1">AI Height Prediction</p>
+                                        <p className="text-xs text-amber-700 leading-relaxed">
+                                            Your height will be estimated from your front photo using 
+                                            <strong>AI depth analysis (ZoeDepth)</strong>. This prediction 
+                                            typically has <strong>±3–5 cm accuracy</strong> and may vary 
+                                            depending on lighting, camera angle, and distance.
+                                        </p>
+                                        <p className="text-xs text-amber-600 mt-2 leading-relaxed">
+                                            <strong>Tips for best results:</strong> Stand at full height in a 
+                                            well-lit indoor space, 1.5–3 meters from the camera, with your 
+                                            full body visible from head to toe.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                     <div>
                         <label className="block text-sm font-medium text-slate-700 mb-2">Weight (kg)</label>

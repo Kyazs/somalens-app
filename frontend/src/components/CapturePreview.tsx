@@ -78,11 +78,14 @@ export const CapturePreview: React.FC = () => {
 
     try {
       const age = parseInt(userData.age) || 25;
-      const height = parseInt(userData.height);
+      const height = userData.heightMode === 'predicted' ? 0 : parseFloat(userData.height);
       const weight = parseInt(userData.weight);
 
-      if (isNaN(height) || isNaN(weight)) {
-        throw new Error("Missing height or weight data");
+      if (userData.heightMode === 'input' && (isNaN(height) || height <= 0)) {
+        throw new Error("Missing height data");
+      }
+      if (isNaN(weight)) {
+        throw new Error("Missing weight data");
       }
 
       const submitResponse = await api.analyze(
@@ -90,7 +93,7 @@ export const CapturePreview: React.FC = () => {
         sideImage,
         age,
         userData.gender,
-        height,
+        height > 0 ? height : undefined,
         weight,
         userData.name || undefined
       );

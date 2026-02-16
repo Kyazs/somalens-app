@@ -260,9 +260,49 @@ def process_measurement(measurement_id: int):
         
         # Get demographics
         gender = measurement.gender or 'male'
-        height_cm = measurement.height or 170.0
         weight_kg = measurement.weight or 70.0
         age = measurement.age or 25
+        
+        # HEIGHT PREDICTION: If height was not provided, estimate using ZoeDepth
+        print(f"Height from measurement record: {measurement.height}")
+        if measurement.height is None or measurement.height <= 0:
+            try:
+                import tempfile
+                from app.services.height_estimation import ZoeDepthHeightEstimator
+                
+                # Save front image to a temp file for ZoeDepth (expects file path)
+                with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+                    tmp.write(front_bytes)
+                    tmp_path = tmp.name
+                
+                with ZoeDepthHeightEstimator(model_type='indoor') as estimator:
+                    height_result = estimator.estimate_height_detailed(tmp_path)
+                
+                # Clean up temp file
+                os.remove(tmp_path)
+                
+                if height_result.is_reliable and 100 <= height_result.height_cm <= 250:
+                    height_cm = height_result.height_cm
+                    print(f"ZoeDepth predicted height: {height_cm:.1f} cm (confidence: {height_result.confidence:.2f})")
+                else:
+                    height_cm = 170.0  # Safe fallback
+                    print(f"ZoeDepth prediction unreliable (confidence: {height_result.confidence:.2f}, "
+                          f"warnings: {height_result.warnings}). Using fallback: {height_cm} cm")
+                
+                # Persist the predicted height to the measurement record
+                measurement.height = round(height_cm, 1)
+                session.add(measurement)
+                session.commit()
+                session.refresh(measurement)
+                
+            except Exception as e:
+                print(f"ZoeDepth height estimation failed: {e}. Using fallback height.")
+                measurement.height = 170.0
+                session.add(measurement)
+                session.commit()
+                session.refresh(measurement)
+        
+        height_cm = measurement.height or 170.0
         
         # PIPELINE STEP 1: Image -> Silhouette -> Normalization
         try:

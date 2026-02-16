@@ -6,6 +6,10 @@ WORKDIR /app
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    curl \
+    unzip \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -19,6 +23,25 @@ RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/c
 ENV TORCH_HOME=/app/models/torch
 RUN mkdir -p /app/models && \
     python -c "import torchvision; import torch; url = torchvision.models.segmentation.DeepLabV3_ResNet101_Weights.DEFAULT.url; torch.hub.download_url_to_file(url, '/app/models/deeplabv3_resnet101.pth')"
+
+# Pre-download ZoeDepth model weights (1.34GB), repos, and MediaPipe pose landmarker
+RUN mkdir -p /app/models/zoedepth/hub/checkpoints /app/models/mediapipe && \
+    curl -L -o /app/models/zoedepth/hub/checkpoints/ZoeD_M12_N.pt \
+    "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_N.pt" && \
+    echo "Downloaded ZoeD_M12_N.pt" && \
+    curl -L -o /tmp/midas.zip "https://github.com/intel-isl/MiDaS/zipball/master" && \
+    unzip -q /tmp/midas.zip -d /tmp/midas_tmp && \
+    mv /tmp/midas_tmp/intel-isl-MiDaS-* /app/models/zoedepth/hub/intel-isl_MiDaS_master && \
+    rm /tmp/midas.zip && rm -rf /tmp/midas_tmp && \
+    echo "Downloaded MiDaS repo" && \
+    curl -L -o /tmp/zoedepth.zip "https://github.com/isl-org/ZoeDepth/zipball/main" && \
+    unzip -q /tmp/zoedepth.zip -d /tmp/zoedepth_tmp && \
+    mv /tmp/zoedepth_tmp/isl-org-ZoeDepth-* /app/models/zoedepth/hub/isl-org_ZoeDepth_main && \
+    rm /tmp/zoedepth.zip && rm -rf /tmp/zoedepth_tmp && \
+    echo "Downloaded ZoeDepth repo" && \
+    curl -L -o /app/models/mediapipe/pose_landmarker_heavy.task \
+    "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task" && \
+    echo "Downloaded MediaPipe pose landmarker"
 
 # Production stage
 FROM python:3.10-slim
@@ -48,6 +71,11 @@ COPY app/ ./app/
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 COPY data/ ./data/
+
+# Copy pre-downloaded ZoeDepth & MediaPipe models to the app's expected cache location
+RUN mkdir -p /app/app/ml_models && \
+    cp -r /app/models/zoedepth /app/app/ml_models/zoedepth && \
+    cp -r /app/models/mediapipe /app/app/ml_models/mediapipe
 
 # Create directories and set permissions (uploads dir created here for proper ownership)
 RUN mkdir -p /app/data /app/uploads && chown -R appuser:appgroup /app

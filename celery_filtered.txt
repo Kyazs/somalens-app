@@ -1,0 +1,261 @@
+﻿
+celery_worker-1  |   
+. process_measurement
+celery_worker-1  | 
+[2026-02-15 
+19:09:43,818: 
+INFO/MainProcess] 
+Task process_measurem
+ent[1460baae-7fb0-480
+6-ba5e-b762691d5ecd] 
+received
+celery_worker-1  | 
+2026-02-15 
+19:09:45.119065: I te
+nsorflow/core/util/po
+rt.cc:113] oneDNN 
+custom operations 
+are on. You may see 
+slightly different 
+numerical results 
+due to 
+floating-point 
+round-off errors 
+from different 
+computation orders. 
+To turn them off, 
+set the environment 
+variable `TF_ENABLE_O
+NEDNN_OPTS=0`.
+celery_worker-1  | 
+[2026-02-15 
+19:09:59,419: WARNING
+/ForkPoolWorker-4] 
+Loading ZoeDepth 
+model (ZoeD_N for 
+indoor)...
+celery_worker-1  | 
+[2026-02-15 
+19:10:03,031: WARNING
+/ForkPoolWorker-4] 
+Downloading: "https:/
+/github.com/intel-isl
+/MiDaS/zipball/master
+" to /app/app/ml_mode
+ls/zoedepth/hub/maste
+r.zip
+celery_worker-1  | 
+[2026-02-15 
+19:10:13,007: WARNING
+/ForkPoolWorker-4] 
+Downloading: "https:/
+/github.com/isl-org/Z
+oeDepth/zipball/main"
+ to /app/app/ml_model
+s/zoedepth/hub/main.z
+ip
+celery_worker-1  | 
+[2026-02-15 
+19:10:23,637: WARNING
+/ForkPoolWorker-4] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/intel-isl_
+MiDaS_master
+celery_worker-1  | 
+[2026-02-15 
+19:10:26,244: WARNING
+/ForkPoolWorker-4] 	
+height: 
+celery_worker-1  | 
+[2026-02-15 
+19:10:26,252: WARNING
+/ForkPoolWorker-4] 
+Using pretrained 
+resource url::https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt
+celery_worker-1  | 
+[2026-02-15 
+19:10:26,252: WARNING
+/ForkPoolWorker-4] 
+Downloading: "https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt" to /app/app/ml_mo
+dels/zoedepth/hub/che
+ckpoints/ZoeD_M12_N.p
+t
+celery_worker-1  | 
+[2026-02-15 
+19:13:20,274: 
+INFO/MainProcess] 
+Task process_measurem
+ent[a76fc23c-9045-44a
+0-bceb-989034d806ab] 
+received
+celery_worker-1  | 
+2026-02-15 
+19:13:21.077003: I te
+nsorflow/core/util/po
+rt.cc:113] oneDNN 
+custom operations 
+are on. You may see 
+slightly different 
+numerical results 
+due to 
+floating-point 
+round-off errors 
+from different 
+computation orders. 
+To turn them off, 
+set the environment 
+variable `TF_ENABLE_O
+NEDNN_OPTS=0`.
+celery_worker-1  | 
+[2026-02-15 
+19:13:39,427: WARNING
+/ForkPoolWorker-2] 
+Loading ZoeDepth 
+model (ZoeD_N for 
+indoor)...
+celery_worker-1  | 
+[2026-02-15 
+19:13:41,776: WARNING
+/ForkPoolWorker-2] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/intel-isl_
+MiDaS_master
+celery_worker-1  | 
+[2026-02-15 
+19:13:44,908: WARNING
+/ForkPoolWorker-2] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/isl-org_Zo
+eDepth_main
+celery_worker-1  | 
+[2026-02-15 
+19:13:46,530: WARNING
+/ForkPoolWorker-2] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/intel-isl_
+MiDaS_master
+celery_worker-1  | 
+[2026-02-15 
+19:13:59,812: WARNING
+/ForkPoolWorker-2] 	
+height: 
+celery_worker-1  | 
+[2026-02-15 
+19:13:59,825: WARNING
+/ForkPoolWorker-2] 
+Using pretrained 
+resource url::https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt
+celery_worker-1  | 
+[2026-02-15 
+19:13:59,826: WARNING
+/ForkPoolWorker-2] 
+Downloading: "https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt" to /app/app/ml_mo
+dels/zoedepth/hub/che
+ckpoints/ZoeD_M12_N.p
+t
+celery_worker-1  | 
+[2026-02-15 
+19:15:52,172: 
+INFO/MainProcess] 
+Task process_measurem
+ent[e6dbfd00-0502-479
+0-a327-f02cbddde720] 
+received
+celery_worker-1  | 
+2026-02-15 
+19:15:54.823707: I te
+nsorflow/core/util/po
+rt.cc:113] oneDNN 
+custom operations 
+are on. You may see 
+slightly different 
+numerical results 
+due to 
+floating-point 
+round-off errors 
+from different 
+computation orders. 
+To turn them off, 
+set the environment 
+variable `TF_ENABLE_O
+NEDNN_OPTS=0`.
+celery_worker-1  | 
+[2026-02-15 
+19:16:13,320: WARNING
+/ForkPoolWorker-3] 
+Loading ZoeDepth 
+model (ZoeD_N for 
+indoor)...
+celery_worker-1  | 
+[2026-02-15 
+19:16:18,826: WARNING
+/ForkPoolWorker-3] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/intel-isl_
+MiDaS_master
+celery_worker-1  | 
+[2026-02-15 
+19:16:24,748: WARNING
+/ForkPoolWorker-3] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/isl-org_Zo
+eDepth_main
+celery_worker-1  | 
+[2026-02-15 
+19:16:27,410: WARNING
+/ForkPoolWorker-3] 
+Using cache found in 
+/app/app/ml_models/zo
+edepth/hub/intel-isl_
+MiDaS_master
+celery_worker-1  | 
+[2026-02-15 
+19:16:41,869: WARNING
+/ForkPoolWorker-3] 	
+height: 
+celery_worker-1  | 
+[2026-02-15 
+19:16:41,880: WARNING
+/ForkPoolWorker-3] 
+Using pretrained 
+resource url::https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt
+celery_worker-1  | 
+[2026-02-15 
+19:16:41,881: WARNING
+/ForkPoolWorker-3] 
+Downloading: "https:/
+/github.com/isl-org/Z
+oeDepth/releases/down
+load/v1.0/ZoeD_M12_N.
+pt" to /app/app/ml_mo
+dels/zoedepth/hub/che
+ckpoints/ZoeD_M12_N.p
+t
+
+
