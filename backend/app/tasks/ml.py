@@ -297,7 +297,7 @@ def process_measurement(measurement_id: int):
                 
                 # Persist the predicted height to the measurement record
                 measurement.height = round(height_cm, 1)
-                session.add(measurement)https://github.com/Kyazs/somalens-app/pull/15/conflict?name=backend%252Fapp%252Ftasks%252Fml.py&ancestor_oid=311ff522d37f1014721bf69acfd509538b81b732&base_oid=82823fc7adc103aa304b6c0cb58ebbcb92b01d09&head_oid=a1dfec5e736debcd9f9559125718438f743b7bca
+                session.add(measurement)
                 session.commit()
                 session.refresh(measurement)
                 

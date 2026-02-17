@@ -21,6 +21,8 @@ services:
       - DEBUG=false
     volumes:
       - uploads_data:/app/uploads
+      - ./backend/ml_model_cache/zoedepth:/app/app/ml_models/zoedepth
+      - ./backend/ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     user: root
     command: >
       sh -c "chown -R appuser:appgroup /app/uploads && 
@@ -48,6 +50,8 @@ services:
       - DEBUG=false
     volumes:
       - uploads_data:/app/uploads
+      - ./backend/ml_model_cache/zoedepth:/app/app/ml_models/zoedepth
+      - ./backend/ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     user: root
     command: >
       sh -c "chown -R appuser:appgroup /app/uploads && 
