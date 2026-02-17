@@ -271,7 +271,7 @@ getMe: async (): Promise<UserResponse> => {
   pollMeasurementUntilComplete: async (
     id: number, 
     onProgress?: (status: string) => void,
-    maxAttempts: number = 120,
+    maxAttempts: number = 360,
     intervalMs: number = 5000
   ): Promise<MeasurementResponse> => {
     const progressMessages = [
@@ -282,15 +282,29 @@ getMe: async (): Promise<UserResponse> => {
       'Calculating somatotype...',
       'Analyzing body composition...',
       'Finalizing results...',
-      'Still processing, please wait...',
+      'Still processing, this can take 2-5 minutes on first run...',
+      'Models are loading, please be patient...',
     ];
 
+    let consecutiveErrors = 0;
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const measurement = await api.getMeasurement(id);
-      
-      if (measurement.somatotype_class !== null) {
-        onProgress?.('Complete!');
-        return measurement;
+      try {
+        const measurement = await api.getMeasurement(id);
+        consecutiveErrors = 0;  // Reset on success
+        
+        if (measurement.somatotype_class !== null) {
+          onProgress?.('Complete!');
+          return measurement;
+        }
+      } catch (err) {
+        consecutiveErrors++;
+        console.warn(`Poll attempt ${attempt} failed (${consecutiveErrors} consecutive):`, err);
+        
+        // Give up after 3 consecutive failures
+        if (consecutiveErrors >= 3) {
+          throw new Error('Server temporarily unavailable. Your analysis is still processing — please check your history in a moment.');
+        }
       }
       
       const msgIndex = Math.min(attempt, progressMessages.length - 1);
