@@ -118,7 +118,7 @@ class MLService:
         normalized = normalize_silhouette_scale(silhouette)
         
         # Return both raw (for saving) and normalized (for CNN)
-        return silhouette, normalized.astype(np.float32) / 255.0
+        return silhouette, normalized.astype(np.float32)
 
     def extract_proxy_measurements(
         self, 
