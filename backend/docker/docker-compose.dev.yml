@@ -22,6 +22,9 @@ services:
       - ../data:/app/data:rw
       - ../alembic:/app/alembic:rw
       - ../alembic.ini:/app/alembic.ini:ro
+      # Pre-downloaded ML models (run scripts/download_models.ps1 first)
+      - ../ml_model_cache/zoedepth:/app/app/ml_models/zoedepth:ro
+      - ../ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     depends_on:
       redis:
         condition: service_healthy
@@ -42,6 +45,9 @@ services:
     volumes:
       - ../app:/app/app:rw
       - ../data:/app/data:rw
+      # Pre-downloaded ML models
+      - ../ml_model_cache/zoedepth:/app/app/ml_models/zoedepth:ro
+      - ../ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     depends_on:
       redis:
         condition: service_healthy
