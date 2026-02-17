@@ -42,6 +42,7 @@ export const POSE_LANDMARKS = {
 export interface MeasurementSession {
   id: number;
   user_id: number;
+  name: string | null;
   front_image_url: string | null;
   side_image_url: string | null;
   height: number | null;

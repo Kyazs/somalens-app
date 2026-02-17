@@ -37,8 +37,8 @@ interface CustomTooltipProps {
 const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
-      <div className="bg-slate-900 border border-slate-700 p-4 rounded-lg shadow-xl backdrop-blur-sm bg-opacity-90">
-        <p className="text-slate-300 mb-2 font-medium">{label}</p>
+      <div className="bg-white border border-slate-200 p-4 rounded-lg shadow-lg backdrop-blur-sm bg-opacity-95">
+        <p className="text-slate-600 mb-2 font-medium">{label}</p>
         <div className="space-y-1">
           {payload.map((entry) => (
             <div key={entry.name} className="flex items-center gap-2 text-sm">
@@ -46,8 +46,8 @@ const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
                 className="w-3 h-3 rounded-full" 
                 style={{ backgroundColor: entry.color }}
               />
-              <span className="text-slate-400 capitalize">{entry.name}:</span>
-              <span className="text-white font-mono font-bold">
+              <span className="text-slate-500 capitalize">{entry.name}:</span>
+              <span className="text-slate-900 font-mono font-bold">
                 {entry.value?.toFixed(1)}
                 {entry.name === 'weight' ? 'kg' : ''}
               </span>
@@ -87,8 +87,8 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
 
   if (data.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
-        <p className="text-slate-500 dark:text-slate-400">No measurement history available yet.</p>
+      <div className="flex items-center justify-center h-64 bg-slate-50 rounded-xl border border-dashed border-slate-300">
+        <p className="text-slate-500">No measurement history available yet.</p>
       </div>
     );
   }
@@ -105,7 +105,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
           className={`px-3 py-1 text-xs rounded-full border transition-all ${
             visibleMetrics.endomorphy 
               ? 'bg-rose-500 text-white border-rose-500' 
-              : 'text-slate-500 border-slate-300 dark:border-slate-700 hover:border-rose-500 hover:text-rose-500'
+              : 'text-slate-500 border-slate-300 hover:border-rose-500 hover:text-rose-500'
           }`}
         >
           Endomorphy
@@ -115,7 +115,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
           className={`px-3 py-1 text-xs rounded-full border transition-all ${
             visibleMetrics.mesomorphy 
               ? 'bg-emerald-500 text-white border-emerald-500' 
-              : 'text-slate-500 border-slate-300 dark:border-slate-700 hover:border-emerald-500 hover:text-emerald-500'
+              : 'text-slate-500 border-slate-300 hover:border-emerald-500 hover:text-emerald-500'
           }`}
         >
           Mesomorphy
@@ -125,7 +125,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
           className={`px-3 py-1 text-xs rounded-full border transition-all ${
             visibleMetrics.ectomorphy 
               ? 'bg-indigo-500 text-white border-indigo-500' 
-              : 'text-slate-500 border-slate-300 dark:border-slate-700 hover:border-indigo-500 hover:text-indigo-500'
+              : 'text-slate-500 border-slate-300 hover:border-indigo-500 hover:text-indigo-500'
           }`}
         >
           Ectomorphy
@@ -135,7 +135,7 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
           className={`px-3 py-1 text-xs rounded-full border transition-all ${
             visibleMetrics.weight 
               ? 'bg-amber-500 text-white border-amber-500' 
-              : 'text-slate-500 border-slate-300 dark:border-slate-700 hover:border-amber-500 hover:text-amber-500'
+              : 'text-slate-500 border-slate-300 hover:border-amber-500 hover:text-amber-500'
           }`}
         >
           Weight
@@ -145,18 +145,18 @@ const ProgressChart: React.FC<ProgressChartProps> = ({ sessions }) => {
       <div className="h-[300px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.3} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} opacity={0.8} />
             <XAxis 
               dataKey="date" 
               stroke="#94a3b8" 
-              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              tick={{ fill: '#64748b', fontSize: 12 }}
               tickLine={false}
               axisLine={false}
             />
             <YAxis 
               yAxisId="left"
               stroke="#94a3b8"
-              tick={{ fill: '#94a3b8', fontSize: 12 }}
+              tick={{ fill: '#64748b', fontSize: 12 }}
               tickLine={false}
               axisLine={false}
               domain={[0, 10]}

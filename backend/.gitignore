@@ -26,7 +26,6 @@ wheels/
 *.egg
 
 # Database
-data/
 *.db
 *.sqlite
 *.sqlite3
@@ -48,3 +47,7 @@ Thumbs.db
 # Internal tools
 .sisyphus/
 .opencode/
+
+# User Data
+uploads/
+data/

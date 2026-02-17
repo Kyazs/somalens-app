@@ -47,6 +47,7 @@ ENV TORCH_HOME=/app/data/torch
 COPY app/ ./app/
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
+COPY data/ ./data/
 
 # Create directories and set permissions (uploads dir created here for proper ownership)
 RUN mkdir -p /app/data /app/uploads && chown -R appuser:appgroup /app

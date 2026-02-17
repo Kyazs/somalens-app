@@ -5,3 +5,4 @@ export { CapturePage } from './CapturePage';
 export { HistoryPage } from './HistoryPage';
 export { ResultsPage } from './ResultsPage';
 export { UserDashboard } from './UserDashboard';
+export { ProfilePage } from './ProfilePage';

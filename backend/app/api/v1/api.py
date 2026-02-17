@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.routers import auth, history, measurements, tasks, users, health
+from app.routers import auth, history, measurements, tasks, users, health, recommendations
 
 api_router = APIRouter()
 
@@ -9,3 +9,4 @@ api_router.include_router(measurements.router)
 api_router.include_router(tasks.router)
 api_router.include_router(users.router)
 api_router.include_router(health.router)
+api_router.include_router(recommendations.router)

@@ -5,9 +5,18 @@ import type { MeasurementSession } from '../types/pose';
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 export interface UserResponse {
-  id: string;
+  id: number;
   email: string;
-  created_at: string;
+  name: string;
+  age: number | null;
+  gender: string | null;
+  is_active: boolean;
+}
+
+export interface UserUpdate {
+  name?: string;
+  age?: number | null;
+  gender?: string | null;
 }
 
 export interface LoginResponse {
@@ -47,6 +56,72 @@ export interface MeasurementResponse {
   body_fat_percentage: number | null;
   circumferences: Record<string, number> | null;
   created_at: string;
+}
+
+export interface MacroBreakdown {
+  protein_g: number;
+  carbs_g: number;
+  fats_g: number;
+  protein_pct: number;
+  carbs_pct: number;
+  fats_pct: number;
+}
+
+export interface MealRecommendations {
+  breakfast: string[];
+  lunch: string[];
+  dinner: string[];
+  snacks: string[];
+}
+
+export interface FoodItem {
+  name: string;
+  category: string;
+  calories_kcal: number;
+  protein_g: number;
+  carbohydrates_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugars_g: number;
+  sodium_mg: number;
+  portion_recommendation: string;
+  meal_timing: string;
+}
+
+export interface MealRecommendationsWithNutrients {
+  breakfast: FoodItem[];
+  lunch: FoodItem[];
+  dinner: FoodItem[];
+  snacks: FoodItem[];
+}
+
+export interface ExerciseInfo {
+  exerciseId: string;
+  name: string;
+  gifUrl: string;
+  targetMuscles: string[];
+  bodyParts: string[];
+  equipments: string[];
+  instructions: string[];
+}
+
+export interface RecommendationResponse {
+  template_id?: string;
+  ter?: number;
+  macros?: MacroBreakdown;
+  meals?: MealRecommendationsWithNutrients;
+  fitness_strategy?: string;
+  diet_principles?: string;
+  exercises?: ExerciseInfo[];
+  exercises_ppl?: {
+    push: ExerciseInfo[];
+    pull: ExerciseInfo[];
+    legs: ExerciseInfo[];
+  };
+  exercise_type?: string;
+  somatotype_description?: string;
+  message?: string;
+  suggestion?: string;
 }
 
 const axiosInstance: AxiosInstance = axios.create({
@@ -132,11 +207,12 @@ export const api = {
     }
   },
 
-  register: async (email: string, password: string): Promise<UserResponse> => {
+register: async (email: string, password: string, name: string): Promise<UserResponse> => {
     try {
-      const response = await axiosInstance.post<UserResponse>('/users', {
+      const response = await axiosInstance.post<UserResponse>('/users/', {
         email,
         password,
+        name,
       });
       return response.data;
     } catch (error) {
@@ -144,8 +220,13 @@ export const api = {
     }
   },
 
-  getMe: async (): Promise<UserResponse> => {
+getMe: async (): Promise<UserResponse> => {
     const response = await axiosInstance.get<UserResponse>('/users/me');
+    return response.data;
+  },
+
+  updateProfile: async (data: UserUpdate): Promise<UserResponse> => {
+    const response = await axiosInstance.patch<UserResponse>('/users/me', data);
     return response.data;
   },
 
@@ -155,7 +236,8 @@ export const api = {
     age: number, 
     gender: 'male' | 'female',
     heightCm: number,
-    weightKg: number
+    weightKg: number,
+    name?: string
   ): Promise<AnalysisResponse> => {
     const formData = new FormData();
     formData.append('front_image', frontImage, 'front.jpg');
@@ -164,6 +246,7 @@ export const api = {
     formData.append('gender', gender);
     formData.append('height', heightCm.toString());
     formData.append('weight', weightKg.toString());
+    if (name) formData.append('name', name);
 
     const response = await axiosInstance.post<AnalysisResponse>('/measurements/analyze', formData, {
       headers: {
@@ -213,5 +296,32 @@ export const api = {
     }
     
     throw new Error('Processing timeout. Please try again.');
+  },
+
+  getRecommendation: async (
+    measurementId: number,
+    goal: string,
+    activityLevel: string,
+    exerciseComplexity: string,
+    exerciseType: string
+  ): Promise<RecommendationResponse> => {
+    const params = new URLSearchParams({
+      goal,
+      activity_level: activityLevel,
+      exercise_complexity: exerciseComplexity,
+      exercise_type: exerciseType,
+    });
+    const response = await axiosInstance.get<RecommendationResponse>(
+      `/recommendations/${measurementId}?${params.toString()}`
+    );
+    return response.data;
+  },
+
+  deleteAccount: async (): Promise<void> => {
+    await axiosInstance.delete('/users/me');
+  },
+
+  deleteMeasurement: async (id: number): Promise<void> => {
+    await axiosInstance.delete(`/history/${id}`);
   }
 };

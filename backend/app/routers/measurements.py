@@ -26,6 +26,7 @@ async def analyze_measurements(
     gender: str = Form(...),
     height: float = Form(...),
     weight: float = Form(...),
+    name: Optional[str] = Form(None),
 ):
     """
     Analyze body measurements from front and side images.
@@ -55,15 +56,15 @@ async def analyze_measurements(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to save images: {str(e)}")
 
-    # Construct URLs
-    # Assuming /static is mounted to serve UPLOAD_DIR
-    base_url = str(request.base_url).rstrip("/")
-    front_url = f"{base_url}/static/{front_filename}"
-    side_url = f"{base_url}/static/{side_filename}"
+    # Construct relative URLs (better for portability)
+    # The frontend will prepend the base URL
+    front_url = f"/static/{front_filename}"
+    side_url = f"/static/{side_filename}"
 
     # Create Measurement record
     measurement = Measurement(
         user_id=current_user.id,
+        name=name or "Untitled Measurement",
         front_image_url=front_url,
         side_image_url=side_url,
         age=age,

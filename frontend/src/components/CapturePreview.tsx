@@ -91,7 +91,8 @@ export const CapturePreview: React.FC = () => {
         age,
         userData.gender,
         height,
-        weight
+        weight,
+        userData.name || undefined
       );
       
       const measurementId = (submitResponse as unknown as { id: number }).id;
@@ -102,7 +103,23 @@ export const CapturePreview: React.FC = () => {
       );
       
       const result = convertMeasurementToResult(completedMeasurement);
-      navigate('/results', { state: { result } });
+      navigate('/results', { 
+        state: { 
+          result,
+          measurementId: completedMeasurement.id,
+          preferences: {
+            goal: userData.goal,
+            activityLevel: userData.activityLevel,
+            exerciseComplexity: userData.exerciseComplexity,
+            exerciseType: userData.exerciseType,
+          },
+          userInfo: {
+            name: userData.name || null,
+            age: parseInt(userData.age) || null,
+            gender: userData.gender,
+          }
+        } 
+      });
     } catch (err) {
       console.error('Analysis failed:', err);
       setError(err instanceof Error ? err.message : 'Analysis failed. Please try again.');
@@ -115,35 +132,35 @@ export const CapturePreview: React.FC = () => {
     <div className="w-full max-w-6xl mx-auto p-6 relative">
       {isAnalyzing && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-gray-900 rounded-2xl p-10 max-w-md w-full mx-4 text-center border border-gray-700 shadow-2xl">
+          <div className="bg-white rounded-2xl p-10 max-w-md w-full mx-4 text-center border border-slate-200 shadow-2xl">
             <div className="w-20 h-20 mx-auto mb-6 relative">
-              <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30"></div>
-              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-emerald-500 animate-spin"></div>
-              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-emerald-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
+              <div className="absolute inset-0 rounded-full border-4 border-teal-200"></div>
+              <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-teal-600 animate-spin"></div>
+              <div className="absolute inset-2 rounded-full border-4 border-transparent border-t-teal-400 animate-spin" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
             </div>
-            <h3 className="text-2xl font-bold text-white mb-3">Analyzing Your Body</h3>
-            <p className="text-emerald-400 text-lg font-medium mb-2">{processingStatus}</p>
-            <p className="text-gray-400 text-sm">This may take up to 30 seconds</p>
+            <h3 className="text-2xl font-bold text-slate-900 mb-3">Analyzing Your Body</h3>
+            <p className="text-teal-600 text-lg font-medium mb-2">{processingStatus}</p>
+            <p className="text-slate-400 text-sm">This may take up to 30 seconds</p>
           </div>
         </div>
       )}
 
-      <h2 className="text-3xl font-bold text-white mb-8 text-center">Review Your Captures</h2>
+      <h2 className="text-3xl font-bold text-slate-900 mb-8 text-center">Review Your Captures</h2>
       
       {error && (
-        <div className="max-w-2xl mx-auto mb-8 p-4 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-sm text-center">
+        <div className="max-w-2xl mx-auto mb-8 p-4 bg-rose-50 border border-rose-200 text-rose-600 rounded-xl text-sm text-center">
           {error}
         </div>
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
         {/* Front View Card */}
-        <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl border border-gray-700 flex flex-col">
-          <div className="p-4 bg-gray-900/50 border-b border-gray-700 flex justify-between items-center">
-            <h3 className="text-xl font-semibold text-white">Front View</h3>
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 flex flex-col">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+            <h3 className="text-xl font-semibold text-slate-900">Front View</h3>
             <button 
               onClick={handleRetakeFront}
-              className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+              className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
             >
               Retake
             </button>
@@ -156,7 +173,7 @@ export const CapturePreview: React.FC = () => {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+              <div className="absolute inset-0 flex items-center justify-center text-slate-400">
                 No image captured
               </div>
             )}
@@ -164,12 +181,12 @@ export const CapturePreview: React.FC = () => {
         </div>
 
         {/* Side View Card */}
-        <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-xl border border-gray-700 flex flex-col">
-          <div className="p-4 bg-gray-900/50 border-b border-gray-700 flex justify-between items-center">
-            <h3 className="text-xl font-semibold text-white">Side View</h3>
+        <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200 flex flex-col">
+          <div className="p-4 bg-slate-50 border-b border-slate-100 flex justify-between items-center">
+            <h3 className="text-xl font-semibold text-slate-900">Side View</h3>
             <button 
               onClick={handleRetakeSide}
-              className="text-sm text-emerald-400 hover:text-emerald-300 font-medium transition-colors"
+              className="text-sm text-teal-600 hover:text-teal-700 font-medium transition-colors"
             >
               Retake
             </button>
@@ -182,7 +199,7 @@ export const CapturePreview: React.FC = () => {
                 className="w-full h-full object-contain"
               />
             ) : (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-500">
+              <div className="absolute inset-0 flex items-center justify-center text-slate-400">
                 No image captured
               </div>
             )}
@@ -195,7 +212,7 @@ export const CapturePreview: React.FC = () => {
         <button
           onClick={handleAnalyzeClick}
           disabled={!frontPreview || !sidePreview || isAnalyzing}
-          className="bg-emerald-600 text-white px-10 py-4 rounded-xl font-bold text-lg shadow-lg shadow-emerald-900/20 hover:bg-emerald-500 hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-3"
+          className="bg-teal-600 text-white px-10 py-4 rounded-xl font-bold text-lg shadow-sm hover:shadow-md hover:bg-teal-700 hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex items-center gap-3"
         >
           {isAnalyzing && (
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />

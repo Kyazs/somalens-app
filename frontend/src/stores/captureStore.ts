@@ -12,6 +12,10 @@ interface CaptureState {
     height: string;
     weight: string;
     gender: 'male' | 'female';
+    goal: 'weight_loss' | 'weight_gain' | 'maintenance';
+    activityLevel: 'sedentary' | 'light' | 'moderate' | 'heavy';
+    exerciseComplexity: 'beginner' | 'intermediate' | 'hard';
+    exerciseType: 'bodyweight' | 'gym';
   };
   setFrontImage: (blob: Blob, preview: string) => void;
   setSideImage: (blob: Blob, preview: string) => void;
@@ -33,7 +37,11 @@ export const useCaptureStore = create<CaptureState>((set) => ({
     age: '',
     height: '',
     weight: '',
-    gender: 'male'
+    gender: 'male',
+    goal: 'maintenance',
+    activityLevel: 'moderate',
+    exerciseComplexity: 'beginner',
+    exerciseType: 'gym'
   },
   setFrontImage: (blob, preview) => set({ frontImage: blob, frontPreview: preview }),
   setSideImage: (blob, preview) => set({ sideImage: blob, sidePreview: preview }),
@@ -49,7 +57,11 @@ export const useCaptureStore = create<CaptureState>((set) => ({
       age: '',
       height: '',
       weight: '',
-      gender: 'male'
+      gender: 'male',
+      goal: 'maintenance',
+      activityLevel: 'moderate',
+      exerciseComplexity: 'beginner',
+      exerciseType: 'gym'
     }
   }),
   goToSideCapture: () => set({ step: 'side' }),
