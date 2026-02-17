@@ -1,8 +1,11 @@
 FROM python:3.10-slim
 
-# Install system dependencies
+# Install system dependencies (curl + OpenCV/MediaPipe runtime libs)
 RUN apt-get update && apt-get install -y \
     curl \
+    unzip \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast dependency management
@@ -19,6 +22,10 @@ RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/c
 
 # Copy application code
 COPY app/ ./app/
+
+# ML models (ZoeDepth, MiDaS, MediaPipe) are volume-mounted from backend/ml_model_cache/
+# Run: backend\scripts\download_models.ps1  (first time only)
+# See docker-compose.dev.yml for volume mount configuration
 
 # Expose port
 EXPOSE 8000

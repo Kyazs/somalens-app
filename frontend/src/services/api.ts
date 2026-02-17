@@ -235,7 +235,7 @@ getMe: async (): Promise<UserResponse> => {
     sideImage: Blob, 
     age: number, 
     gender: 'male' | 'female',
-    heightCm: number,
+    heightCm: number | undefined,
     weightKg: number,
     name?: string
   ): Promise<AnalysisResponse> => {
@@ -244,7 +244,9 @@ getMe: async (): Promise<UserResponse> => {
     formData.append('side_image', sideImage, 'side.jpg');
     formData.append('age', age.toString());
     formData.append('gender', gender);
-    formData.append('height', heightCm.toString());
+    if (heightCm !== undefined && heightCm > 0) {
+      formData.append('height', heightCm.toString());
+    }
     formData.append('weight', weightKg.toString());
     if (name) formData.append('name', name);
 
@@ -269,24 +271,40 @@ getMe: async (): Promise<UserResponse> => {
   pollMeasurementUntilComplete: async (
     id: number, 
     onProgress?: (status: string) => void,
-    maxAttempts: number = 60,
-    intervalMs: number = 2000
+    maxAttempts: number = 360,
+    intervalMs: number = 5000
   ): Promise<MeasurementResponse> => {
     const progressMessages = [
       'Uploading images...',
       'Processing images...',
+      'Loading AI models...',
       'Extracting body measurements...',
       'Calculating somatotype...',
       'Analyzing body composition...',
-      'Finalizing results...'
+      'Finalizing results...',
+      'Still processing, this can take 2-5 minutes on first run...',
+      'Models are loading, please be patient...',
     ];
 
+    let consecutiveErrors = 0;
+
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      const measurement = await api.getMeasurement(id);
-      
-      if (measurement.somatotype_class !== null) {
-        onProgress?.('Complete!');
-        return measurement;
+      try {
+        const measurement = await api.getMeasurement(id);
+        consecutiveErrors = 0;  // Reset on success
+        
+        if (measurement.somatotype_class !== null) {
+          onProgress?.('Complete!');
+          return measurement;
+        }
+      } catch (err) {
+        consecutiveErrors++;
+        console.warn(`Poll attempt ${attempt} failed (${consecutiveErrors} consecutive):`, err);
+        
+        // Give up after 3 consecutive failures
+        if (consecutiveErrors >= 3) {
+          throw new Error('Server temporarily unavailable. Your analysis is still processing — please check your history in a moment.');
+        }
       }
       
       const msgIndex = Math.min(attempt, progressMessages.length - 1);

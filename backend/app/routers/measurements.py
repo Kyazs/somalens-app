@@ -24,19 +24,20 @@ async def analyze_measurements(
     side_image: UploadFile = File(...),
     age: int = Form(...),
     gender: str = Form(...),
-    height: float = Form(...),
+    height: Optional[float] = Form(None),
     weight: float = Form(...),
     name: Optional[str] = Form(None),
 ):
     """
     Analyze body measurements from front and side images.
+    Height is optional — if not provided, it will be predicted using ZoeDepth.
     """
     # Validation
     if gender.lower() not in ["male", "female"]:
         raise HTTPException(status_code=422, detail="Gender must be 'male' or 'female'")
     if age < 10 or age > 100:
         raise HTTPException(status_code=422, detail="Age must be between 10 and 100")
-    if height < 100 or height > 250:
+    if height is not None and (height < 100 or height > 250):
         raise HTTPException(status_code=422, detail="Height must be between 100 and 250 cm")
     if weight < 30 or weight > 200:
         raise HTTPException(status_code=422, detail="Weight must be between 30 and 200 kg")

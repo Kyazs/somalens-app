@@ -6,6 +6,8 @@ WORKDIR /app
 # Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    libgl1 \
+    libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv
@@ -15,10 +17,11 @@ RUN pip install uv
 COPY pyproject.toml ./
 RUN uv pip install --system --extra-index-url https://download.pytorch.org/whl/cpu -e .
 
-# Pre-download DeepLabV3 weights
-ENV TORCH_HOME=/app/models/torch
-RUN mkdir -p /app/models && \
-    python -c "import torchvision; import torch; url = torchvision.models.segmentation.DeepLabV3_ResNet101_Weights.DEFAULT.url; torch.hub.download_url_to_file(url, '/app/models/deeplabv3_resnet101.pth')"
+# Copy pre-downloaded ML models from build context
+# (Run scripts/download_models.sh or scripts/download_models.ps1 first)
+COPY ml_model_cache/zoedepth/ /app/models/zoedepth/
+COPY ml_model_cache/mediapipe/ /app/models/mediapipe/
+COPY ml_model_cache/torch/ /app/models/torch/
 
 # Production stage
 FROM python:3.10-slim
@@ -48,6 +51,22 @@ COPY app/ ./app/
 COPY alembic.ini ./
 COPY alembic/ ./alembic/
 COPY data/ ./data/
+
+# Copy pre-downloaded ZoeDepth & MediaPipe models to the app's expected cache location
+RUN mkdir -p /app/app/ml_models && \
+    cp -r /app/models/zoedepth /app/app/ml_models/zoedepth && \
+    cp -r /app/models/mediapipe /app/app/ml_models/mediapipe
+
+# Place DeepLabV3 weights where torchvision expects them
+# torchvision looks at $TORCH_HOME/hub/checkpoints/<original_filename>
+RUN mkdir -p /app/data/torch/hub/checkpoints && \
+    if [ -f /app/models/torch/hub/checkpoints/deeplabv3_resnet101_coco-586e9e4e.pth ]; then \
+    cp /app/models/torch/hub/checkpoints/deeplabv3_resnet101_coco-586e9e4e.pth \
+    /app/data/torch/hub/checkpoints/deeplabv3_resnet101_coco-586e9e4e.pth; \
+    elif [ -f /app/models/torch/deeplabv3_resnet101.pth ]; then \
+    cp /app/models/torch/deeplabv3_resnet101.pth \
+    /app/data/torch/hub/checkpoints/deeplabv3_resnet101_coco-586e9e4e.pth; \
+    fi
 
 # Create directories and set permissions (uploads dir created here for proper ownership)
 RUN mkdir -p /app/data /app/uploads && chown -R appuser:appgroup /app
