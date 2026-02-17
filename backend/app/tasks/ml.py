@@ -12,10 +12,14 @@ Orchestrates the full pipeline:
 
 import os
 import io
+import logging
+import traceback
 import numpy as np
 import pandas as pd
 from typing import Dict, Any, Tuple, Optional
 from PIL import Image
+
+logger = logging.getLogger(__name__)
 
 from app.celery_worker import celery_app
 from app.database import engine
@@ -53,19 +57,21 @@ class MLService:
                 MODELS_DIR, "measurementExtractor_stdScal_img224_inp2_out9_ep151.keras"
             )
             self.cnn_model = tf.keras.models.load_model(cnn_path)
-            print(f"Loaded CNN model from {cnn_path}")
+            logger.info(f"Loaded CNN model from {cnn_path}")
         except Exception as e:
-            print(f"Warning: Could not load CNN model: {e}")
+            logger.warning(f"Could not load CNN model: {e}")
             self.cnn_model = None
             
         self.is_loaded = True
 
-    def process_image_pipeline(self, image_bytes: bytes) -> np.ndarray:
+    def process_image_pipeline(self, image_bytes: bytes) -> Tuple[np.ndarray, np.ndarray]:
         """
         Process raw image through segmentation + normalization pipeline.
         
         Returns:
-            Normalized silhouette (224, 224, 1) float32, values 0-1
+            Tuple of:
+                - Raw silhouette (448, 448, 1) uint8, values 0 or 255
+                - Normalized silhouette (224, 224, 1) float32, values 0-1
         """
         if self.segmenter is None:
             self.segmenter = DeepLabV3Segmenter()
@@ -80,8 +86,8 @@ class MLService:
         # Step 2: Normalize scale to 85% coverage, resize to 224x224
         normalized = normalize_silhouette_scale(silhouette)  # (224, 224, 1)
         
-        # Convert to float32, normalize to 0-1
-        return normalized.astype(np.float32) / 255.0
+        # Return both raw (for saving) and normalized (for CNN)
+        return silhouette, normalized.astype(np.float32) / 255.0
 
     def extract_proxy_measurements(
         self, 
@@ -189,6 +195,30 @@ class MLService:
 ml_service = MLService()
 
 
+def _find_uploads_dir(measurement: Measurement) -> str:
+    """Find the uploads directory that contains the measurement's images."""
+    front_filename = measurement.front_image_url.split("/static/")[-1] if measurement.front_image_url else None
+    
+    uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
+    backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+    backend_uploads = os.path.join(backend_dir, "uploads")
+    
+    possible_dirs = [
+        backend_uploads,
+        uploads_dir,
+        "/app/uploads",
+        os.path.join(os.getcwd(), "uploads"),
+    ]
+    
+    for dir_path in possible_dirs:
+        if front_filename and os.path.exists(os.path.join(dir_path, front_filename)):
+            return dir_path
+        if os.path.isdir(dir_path):
+            return dir_path
+    
+    raise ValueError(f"Could not find uploads directory. Tried: {possible_dirs}")
+
+
 def read_images_from_filesystem(measurement: Measurement) -> Tuple[bytes, bytes]:
     """Helper to read image bytes from filesystem."""
     if not measurement.front_image_url or not measurement.side_image_url:
@@ -198,28 +228,7 @@ def read_images_from_filesystem(measurement: Measurement) -> Tuple[bytes, bytes]
         front_filename = measurement.front_image_url.split("/static/")[-1]
         side_filename = measurement.side_image_url.split("/static/")[-1]
         
-        uploads_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "uploads")
-        
-        # Get path to 'backend' directory (parent of 'app') - robust finding of project root
-        backend_dir = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        backend_uploads = os.path.join(backend_dir, "uploads")
-        
-        # Fallback: Try multiple possible paths for uploads directory
-        possible_dirs = [
-            backend_uploads, # backend/uploads (most likely for local dev)
-            uploads_dir,  # app/uploads (relative to app/)
-            "/app/uploads",  # Docker absolute path
-            os.path.join(os.getcwd(), "uploads"),  # Current working dir
-        ]
-        
-        upload_path = None
-        for dir_path in possible_dirs:
-            if os.path.exists(os.path.join(dir_path, front_filename)):
-                upload_path = dir_path
-                break
-        
-        if not upload_path:
-            raise ValueError(f"Error: Could not find uploads directory containing {front_filename}. Tried: {possible_dirs}")
+        upload_path = _find_uploads_dir(measurement)
         
         front_path = os.path.join(upload_path, front_filename)
         side_path = os.path.join(upload_path, side_filename)
@@ -264,8 +273,9 @@ def process_measurement(measurement_id: int):
         age = measurement.age or 25
         
         # HEIGHT PREDICTION: If height was not provided, estimate using ZoeDepth
-        print(f"Height from measurement record: {measurement.height}")
+        logger.info(f"[Measurement {measurement_id}] Height from measurement record: {measurement.height}")
         if measurement.height is None or measurement.height <= 0:
+            logger.info(f"[Measurement {measurement_id}] No height provided — running ZoeDepth estimation...")
             try:
                 import tempfile
                 from app.services.height_estimation import ZoeDepthHeightEstimator
@@ -275,19 +285,28 @@ def process_measurement(measurement_id: int):
                     tmp.write(front_bytes)
                     tmp_path = tmp.name
                 
+                logger.info(f"[Measurement {measurement_id}] Loading ZoeDepthHeightEstimator (model_type='indoor')...")
                 with ZoeDepthHeightEstimator(model_type='indoor') as estimator:
                     height_result = estimator.estimate_height_detailed(tmp_path)
                 
                 # Clean up temp file
                 os.remove(tmp_path)
                 
+                logger.info(f"[Measurement {measurement_id}] ZoeDepth raw result: "
+                            f"height={height_result.height_cm:.1f}cm, "
+                            f"confidence={height_result.confidence:.2f}, "
+                            f"reliable={height_result.is_reliable}, "
+                            f"warnings={height_result.warnings}, "
+                            f"details={height_result.details}")
+                
                 if height_result.is_reliable and 100 <= height_result.height_cm <= 250:
                     height_cm = height_result.height_cm
-                    print(f"ZoeDepth predicted height: {height_cm:.1f} cm (confidence: {height_result.confidence:.2f})")
+                    logger.info(f"[Measurement {measurement_id}] ZoeDepth predicted height: {height_cm:.1f} cm (confidence: {height_result.confidence:.2f})")
                 else:
                     height_cm = 170.0  # Safe fallback
-                    print(f"ZoeDepth prediction unreliable (confidence: {height_result.confidence:.2f}, "
-                          f"warnings: {height_result.warnings}). Using fallback: {height_cm} cm")
+                    logger.warning(f"[Measurement {measurement_id}] ZoeDepth prediction unreliable "
+                                   f"(confidence: {height_result.confidence:.2f}, "
+                                   f"warnings: {height_result.warnings}). Using fallback: {height_cm} cm")
                 
                 # Persist the predicted height to the measurement record
                 measurement.height = round(height_cm, 1)
@@ -296,7 +315,9 @@ def process_measurement(measurement_id: int):
                 session.refresh(measurement)
                 
             except Exception as e:
-                print(f"ZoeDepth height estimation failed: {e}. Using fallback height.")
+                logger.error(f"[Measurement {measurement_id}] ZoeDepth height estimation FAILED: {e}\n"
+                             f"{traceback.format_exc()}")
+                logger.warning(f"[Measurement {measurement_id}] Using fallback height: 170.0 cm")
                 measurement.height = 170.0
                 session.add(measurement)
                 session.commit()
@@ -306,10 +327,44 @@ def process_measurement(measurement_id: int):
         
         # PIPELINE STEP 1: Image -> Silhouette -> Normalization
         try:
-            front_sil = ml_service.process_image_pipeline(front_bytes)
-            side_sil = ml_service.process_image_pipeline(side_bytes)
+            front_raw_sil, front_sil = ml_service.process_image_pipeline(front_bytes)
+            side_raw_sil, side_sil = ml_service.process_image_pipeline(side_bytes)
         except Exception as e:
             return f"Segmentation pipeline failed: {str(e)}"
+        
+        # Save silhouettes to disk and replace original images
+        try:
+            uploads_dir = _find_uploads_dir(measurement)
+            
+            # Save silhouette PNGs
+            front_sil_filename = f"sil_front_{measurement_id}.png"
+            side_sil_filename = f"sil_side_{measurement_id}.png"
+            
+            front_sil_img = Image.fromarray(front_raw_sil.squeeze(), mode='L')
+            side_sil_img = Image.fromarray(side_raw_sil.squeeze(), mode='L')
+            
+            front_sil_img.save(os.path.join(uploads_dir, front_sil_filename))
+            side_sil_img.save(os.path.join(uploads_dir, side_sil_filename))
+            
+            # Delete original uploaded images
+            for url in [measurement.front_image_url, measurement.side_image_url]:
+                if url:
+                    orig_filename = url.split("/static/")[-1]
+                    orig_path = os.path.join(uploads_dir, orig_filename)
+                    if os.path.exists(orig_path):
+                        os.remove(orig_path)
+                        logger.info(f"[Measurement {measurement_id}] Deleted original image: {orig_filename}")
+            
+            # Update DB URLs to point to silhouettes
+            measurement.front_image_url = f"/static/{front_sil_filename}"
+            measurement.side_image_url = f"/static/{side_sil_filename}"
+            session.add(measurement)
+            session.commit()
+            session.refresh(measurement)
+            
+            logger.info(f"[Measurement {measurement_id}] Saved silhouettes and updated image URLs")
+        except Exception as e:
+            logger.warning(f"[Measurement {measurement_id}] Failed to save silhouettes: {e}")
         
         # PIPELINE STEP 2: CNN extraction
         # This returns a dictionary of proxy measurements
