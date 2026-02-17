@@ -137,7 +137,22 @@ export function usePoseValidation(): UsePoseValidationResult {
       const errors: string[] = [];
       const warnings: string[] = [];
 
-      if (!checkBodyFullyVisible(landmarks)) {
+      // For side poses, use relaxed visibility — only require key landmarks
+      // Far-side limbs are naturally occluded when turned sideways
+      const sideVisibleLandmarks = [
+        POSE_LANDMARKS.NOSE,
+        POSE_LANDMARKS.LEFT_SHOULDER,
+        POSE_LANDMARKS.RIGHT_SHOULDER,
+        POSE_LANDMARKS.LEFT_HIP,
+        POSE_LANDMARKS.RIGHT_HIP,
+      ];
+
+      const sideBodyVisible = sideVisibleLandmarks.every((index) => {
+        const landmark = landmarks[index];
+        return landmark && landmark.visibility && landmark.visibility > 0.5;
+      });
+
+      if (!sideBodyVisible) {
         errors.push('Body not fully visible');
       }
 
@@ -152,15 +167,14 @@ export function usePoseValidation(): UsePoseValidationResult {
         warnings.push('Move closer to camera');
       }
 
-      // Check profile angle (shoulders should be significantly different in Z)
-      // We already check this in detectPoseType, but good to double check or provide feedback
+      // CRITICAL: Check profile angle — shoulders must show significant depth difference
       const leftShoulder = landmarks[POSE_LANDMARKS.LEFT_SHOULDER];
       const rightShoulder = landmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
 
       if (leftShoulder && rightShoulder) {
         const depthDiff = Math.abs(leftShoulder.z - rightShoulder.z);
         if (depthDiff <= 0.15) {
-           warnings.push('Turn 90 degrees to the side');
+           errors.push('Turn 90 degrees to the side');
         }
       }
 
@@ -170,7 +184,7 @@ export function usePoseValidation(): UsePoseValidationResult {
         warnings,
       };
     },
-    [checkBodyFullyVisible, checkCentered, estimateDistance]
+    [checkCentered, estimateDistance]
   );
 
   return {

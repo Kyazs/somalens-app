@@ -23,6 +23,20 @@ const Icons = {
   Plus: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
 };
 
+// --- Camera Helpers ---
+
+/** Infer facingMode from device label to determine video mirroring */
+function inferFacingMode(label: string): 'user' | 'environment' | null {
+  const lower = label.toLowerCase();
+  if (lower.includes('front') || lower.includes('user') || lower.includes('selfie') || lower.includes('facetime')) {
+    return 'user';
+  }
+  if (lower.includes('back') || lower.includes('rear') || lower.includes('environment') || lower.includes('main')) {
+    return 'environment';
+  }
+  return null;
+}
+
 // --- Helper Components ---
 
 const SimpleNav = () => (
@@ -392,7 +406,7 @@ const MethodSelection = ({
     onUploadSelect,
     onBack 
 }: { 
-    onCameraSelect: (deviceId: string) => void;
+    onCameraSelect: (deviceId: string, facingMode: 'user' | 'environment' | null) => void;
     onUploadSelect: () => void;
     onBack: () => void;
 }) => {
@@ -403,7 +417,10 @@ const MethodSelection = ({
     const loadDevices = useCallback(async () => {
         setLoading(true);
         try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
+            // Request permission to access labels, then immediately release the stream
+            // so it doesn't interfere with the actual camera selection later.
+            const permissionStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            permissionStream.getTracks().forEach(track => track.stop());
             
             const devs = await navigator.mediaDevices.enumerateDevices();
 
@@ -472,7 +489,11 @@ const MethodSelection = ({
                                         <Icons.Refresh />
                                     </button>
                                     <button 
-                                        onClick={() => onCameraSelect(selectedDevice)}
+                                        onClick={() => {
+                                            const dev = devices.find(d => d.deviceId === selectedDevice);
+                                            const facingMode = dev ? inferFacingMode(dev.label) : null;
+                                            onCameraSelect(selectedDevice, facingMode);
+                                        }}
                                         className="flex-1 bg-teal-600 text-white font-medium py-2 rounded-lg hover:bg-teal-700 transition-colors"
                                     >
                                         Start Camera
@@ -517,6 +538,7 @@ export function CapturePage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [capturePhase, setCapturePhase] = useState<'setup' | 'method' | 'capture' | 'upload'>('setup');
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
+  const [selectedFacingMode, setSelectedFacingMode] = useState<'user' | 'environment' | null>(null);
   const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait');
   const [rotation, setRotation] = useState(0);
 
@@ -546,21 +568,29 @@ export function CapturePage() {
      reset();
   }, [reset]);
 
-  // Initialize Camera
+  // Keep stream in a ref so it persists across step changes
+  const streamRef = useRef<MediaStream | null>(null);
+
+  // Initialize Camera — only depends on capturePhase, deviceId, and orientation.
+  // step is intentionally excluded so the camera doesn't restart when switching front→side.
   useEffect(() => {
-    if (capturePhase !== 'capture' || step === 'preview') return;
+    if (capturePhase !== 'capture') return;
 
     async function startCamera() {
       try {
-        const constraints = {
-            video: {
-                deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
-                width: orientation === 'portrait' ? { ideal: 1080 } : { ideal: 1920 },
-                height: orientation === 'portrait' ? { ideal: 1920 } : { ideal: 1080 },
-                aspectRatio: orientation === 'portrait' ? { ideal: 0.5625 } : { ideal: 1.7777777778 }
-            }
-        };
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        // Use deviceId for all cameras with orientation-based dimension hints.
+        // On mobile, browsers may ignore dimension hints — user can use the
+        // Portrait/Landscape toggle and Rotate button to adjust manually.
+        const portraitWanted = orientation === 'portrait';
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: selectedDeviceId ? { exact: selectedDeviceId } : undefined,
+            width: { ideal: portraitWanted ? 1080 : 1920 },
+            height: { ideal: portraitWanted ? 1920 : 1080 },
+            aspectRatio: { ideal: portraitWanted ? 0.5625 : 1.7777777778 },
+          }
+        });
+        streamRef.current = stream;
 
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -578,33 +608,65 @@ export function CapturePage() {
     startCamera();
 
     return () => {
-      if (videoRef.current?.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach((track) => track.stop());
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
       }
       if (requestRef.current) {
         cancelAnimationFrame(requestRef.current);
       }
     };
-  }, [capturePhase, step, selectedDeviceId, orientation]);
+  }, [capturePhase, selectedDeviceId, orientation]);
+
+  // Reattach stream to video element after retake (when video element re-mounts from preview)
+  useEffect(() => {
+    if (step === 'preview') return;
+    if (capturePhase !== 'capture') return;
+    if (!streamRef.current) return;
+    
+    // If video element exists but has no stream, reattach
+    if (videoRef.current && !videoRef.current.srcObject) {
+      videoRef.current.srcObject = streamRef.current;
+      videoRef.current.onloadedmetadata = () => {
+        setHasCamera(true);
+        videoRef.current?.play();
+      };
+    }
+  }, [step, capturePhase]);
+
+  // Use refs for values that animate needs to always read fresh
+  const stepRef = useRef(step);
+  stepRef.current = step;
+  const rotationRef = useRef(rotation);
+  rotationRef.current = rotation;
+
+  // Reset validation state when step changes so old results don't carry over
+  useEffect(() => {
+    setValidationResult(null);
+    setCurrentLandmarks(null);
+    setCountdown(null);
+  }, [step]);
 
   // Pose Detection Loop
   const animate = useCallback(() => {
+    const currentStep = stepRef.current;
+    const currentRotation = rotationRef.current;
+
     if (
       videoRef.current && 
       videoRef.current.readyState >= 2 && 
       isReady && 
-      step !== 'preview' &&
+      currentStep !== 'preview' &&
       capturePhase === 'capture'
     ) {
       // Determine what to send to MediaPipe
       let inputElement: HTMLVideoElement | HTMLCanvasElement = videoRef.current;
       
       // If rotated, we must draw to an offscreen canvas first so MediaPipe sees the upright image
-      if (rotation !== 0) {
+      if (currentRotation !== 0) {
           const canvas = document.createElement('canvas');
           // Swap dimensions if 90/270
-          if (rotation === 90 || rotation === 270) {
+          if (currentRotation === 90 || currentRotation === 270) {
               canvas.width = videoRef.current.videoHeight;
               canvas.height = videoRef.current.videoWidth;
           } else {
@@ -615,8 +677,8 @@ export function CapturePage() {
           const ctx = canvas.getContext('2d');
           if (ctx) {
               ctx.translate(canvas.width / 2, canvas.height / 2);
-              ctx.rotate((rotation * Math.PI) / 180);
-               if (rotation === 90 || rotation === 270) {
+              ctx.rotate((currentRotation * Math.PI) / 180);
+               if (currentRotation === 90 || currentRotation === 270) {
                   ctx.drawImage(videoRef.current, -videoRef.current.videoWidth / 2, -videoRef.current.videoHeight / 2);
                } else {
                   ctx.drawImage(videoRef.current, -videoRef.current.videoWidth / 2, -videoRef.current.videoHeight / 2);
@@ -631,10 +693,10 @@ export function CapturePage() {
         const landmarks = result.landmarks[0];
         setCurrentLandmarks(landmarks);
         
-        // Validate based on current step
-        if (step === 'front') {
+        // Validate based on current step (read from ref for freshness)
+        if (currentStep === 'front') {
           setValidationResult(validateFrontPose(landmarks));
-        } else if (step === 'side') {
+        } else if (currentStep === 'side') {
           setValidationResult(validateSidePose(landmarks));
         }
       } else {
@@ -643,7 +705,7 @@ export function CapturePage() {
       }
     }
     requestRef.current = requestAnimationFrame(animate);
-  }, [isReady, step, capturePhase, detectPose, validateFrontPose, validateSidePose]);
+  }, [isReady, capturePhase, detectPose, validateFrontPose, validateSidePose]);
 
   useEffect(() => {
     if (capturePhase === 'capture') {
@@ -656,7 +718,18 @@ export function CapturePage() {
     };
   }, [animate, capturePhase]);
 
-  // Capture Logic with Countdown
+  useEffect(() => {
+    if (!validationResult?.isValid || countdown !== null || isFlashing) {
+      return;
+    }
+
+    const stabilityTimer = setTimeout(() => {
+        setCountdown(3);
+    }, 3000);
+
+    return () => clearTimeout(stabilityTimer);
+  }, [validationResult?.isValid, countdown, isFlashing]);
+
   const handleCaptureClick = () => {
     if (!videoRef.current || !validationResult?.isValid || countdown !== null) return;
     setCountdown(3);
@@ -755,7 +828,7 @@ export function CapturePage() {
                 </button>
                 <button 
                     onClick={toggleOrientation}
-                    className="pointer-events-auto flex items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
+                    className="flex pointer-events-auto items-center gap-2 text-xs text-white/80 hover:text-white bg-black/40 px-4 py-2 rounded-full backdrop-blur-md transition-colors"
                 >
                     <Icons.Orientation /> {orientation === 'portrait' ? 'Landscape' : 'Portrait'}
                 </button>
@@ -788,7 +861,7 @@ export function CapturePage() {
                 autoPlay
                 playsInline
                 muted
-                className="absolute inset-0 w-full h-full object-cover transform scale-x-[-1]"
+                className={`absolute inset-0 w-full h-full object-contain${selectedFacingMode !== 'environment' ? ' scale-x-[-1]' : ''}`}
                 />
             </div>
     
@@ -806,6 +879,15 @@ export function CapturePage() {
                     validationResult={validationResult}
                     poseType={step}
                  />
+            </div>
+
+            {/* Hold Still Indicator */}
+            <div className="absolute inset-x-0 top-1/4 z-50 pointer-events-none flex justify-center">
+                {validationResult?.isValid && countdown === null && !isFlashing && (
+                    <div className="bg-teal-500/90 text-white px-6 py-2 rounded-full font-bold animate-pulse text-lg shadow-lg backdrop-blur-sm transition-all transform scale-100">
+                        Hold Still...
+                    </div>
+                )}
             </div>
     
             {(cameraError || mediapipeError || mediapipeLoading || !isReady || !hasCamera) && (
@@ -896,8 +978,9 @@ export function CapturePage() {
             {/* Panel 2: MethodSelection - width: 100% */}
             <div className="w-full flex-shrink-0 px-px">
               <MethodSelection 
-                  onCameraSelect={(deviceId) => {
+onCameraSelect={(deviceId, facingMode) => {
                       setSelectedDeviceId(deviceId);
+                      setSelectedFacingMode(facingMode);
                       setCapturePhase('capture');
                   }}
                   onUploadSelect={() => {
