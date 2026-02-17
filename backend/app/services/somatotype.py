@@ -82,7 +82,7 @@ def calculate_heath_carter(
 
 
 def classify_somatotype(
-    endomorphy: float, mesomorphy: float, ectomorphy: float, threshold: float = 0.5
+    endomorphy: float, mesomorphy: float, ectomorphy: float, threshold: float = 1.75
 ) -> str:
     """
     Classify somatotype into standard Heath-Carter categories.
@@ -100,7 +100,7 @@ def classify_somatotype(
         endomorphy: Endomorphy component value
         mesomorphy: Mesomorphy component value
         ectomorphy: Ectomorphy component value
-        threshold: Threshold for component dominance (default: 0.5)
+        threshold: Threshold for component dominance (default: 1.75, per Research V3 Phase 42)
         
     Returns:
         Somatotype category string
@@ -115,23 +115,23 @@ def classify_somatotype(
         return "Central"
 
     # 2. SINGLE DOMINANT: One component clearly higher than both others
-    if endomorphy > mesomorphy + threshold and endomorphy > ectomorphy + threshold:
+    if endomorphy >= mesomorphy + threshold and endomorphy >= ectomorphy + threshold:
         return "Endomorph"
 
-    if mesomorphy > endomorphy + threshold and mesomorphy > ectomorphy + threshold:
+    if mesomorphy >= endomorphy + threshold and mesomorphy >= ectomorphy + threshold:
         return "Mesomorph"
 
-    if ectomorphy > endomorphy + threshold and ectomorphy > mesomorphy + threshold:
+    if ectomorphy >= endomorphy + threshold and ectomorphy >= mesomorphy + threshold:
         return "Ectomorph"
 
     # 3. CO-DOMINANT: Two components high, one low
-    if endomorphy > ectomorphy + threshold and mesomorphy > ectomorphy + threshold:
+    if endomorphy >= ectomorphy + threshold and mesomorphy >= ectomorphy + threshold:
         return "Endomorph-Mesomorph"
 
-    if mesomorphy > endomorphy + threshold and ectomorphy > endomorphy + threshold:
+    if mesomorphy >= endomorphy + threshold and ectomorphy >= endomorphy + threshold:
         return "Mesomorph-Ectomorph"
 
-    if endomorphy > mesomorphy + threshold and ectomorphy > mesomorphy + threshold:
+    if endomorphy >= mesomorphy + threshold and ectomorphy >= mesomorphy + threshold:
         return "Endomorph-Ectomorph"
 
     # 4. FALLBACK: Classify by highest component
