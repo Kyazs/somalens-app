@@ -31,7 +31,11 @@ SomaLens uses a multi-stage ML pipeline for somatotype estimation and height pre
 ### Somatotype Pipeline
 
 ```
-Input Image → DeepLabV3 Segmentation → Scale Normalization → CNN Extraction → Ultra V3 Prediction → Heath-Carter Somatotype
+Input Image → DeepLabV3 Segmentation → Scale Normalization → CNN Extraction (z-score inverse)
+  → Ultra V3 V2 Prediction (SVR V2.1 + RF v2.2n)
+  → G13 Skinfold Calibration → G38 Girth Calibration
+  → Heath-Carter Somatotype → S5_g0.25 Bias Correction → Classification (T=1.75)
+  → Body Fat Estimation
 ```
 
 ### Height Estimation Pipeline
@@ -54,17 +58,49 @@ Input Image → ZoeDepth Metric Depth → MediaPipe Pose Landmarks → Pinhole C
 
 3. **CNN Proxy Measurement Extraction** (`app/tasks/ml.py`)
    - Multi-input CNN with gender and stature
-   - Outputs anthropometric proxy measurements
+   - Outputs 9 anthropometric proxy measurements (z-scores → cm via inverse transform)
    - Input format: [gender_onehot, stature/200]
+   - Measurements: chest, buttock, waist, thigh, ankle circumferences; biacromial breadth; knee height; arm circumference flexed; calf circumference
 
-4. **Ultra V3 Predictor** (`app/services/ultra_v3_predictor.py`)
-   - SVR models for skinfold predictions
-   - RF models for breadths and girths
+4. **Ultra V3 V2 Predictor** (`app/services/ultra_v3_predictor.py`)
+   - SVR V2.1 models for all 4 skinfold predictions (Triceps, Subscapular, Supraspinale, Calf)
+   - RF v2.2n models for breadths (Humerus, Femur) and girths (Arm, Calf)
+   - 15 SVR features including Deurenberg body fat composition
    - Filipino calibration coefficients applied
+   - Returns both calibrated and raw predictions (for downstream G13/G38)
 
-5. **Heath-Carter Somatotype** (`app/services/somatotype.py`)
-   - Calculates endomorphy, mesomorphy, ectomorphy
-   - Classifies somatotype (e.g., "Mesomorph-Endomorph")
+5. **G13 Skinfold Calibration** (`app/services/measurement_calibration.py`)
+   - BayesianRidge per-skinfold calibration using raw SVR predictions + CNN features
+   - Corrects CAESAR→Filipino domain gap with conservative regularization (alpha=1e-2)
+
+6. **G38 Girth/Breadth Calibration** (`app/services/measurement_calibration.py`)
+   - BayesianRidge per-girth calibration using raw RF predictions + CNN features
+   - Humerus breadth uses simple offset; others use multivariate regression
+
+7. **Heath-Carter Somatotype** (`app/services/somatotype.py`)
+   - Calculates endomorphy, mesomorphy, ectomorphy from calibrated measurements
+   - Classification threshold: T=1.75 (Research V3 Phase 42)
+   - Uses `>=` comparisons for dominance checks
+
+8. **S5_g0.25 Bias Correction** (`app/services/bias_correction.py`)
+   - BayesianRidge multivariate correction for Endomorphy and Mesomorphy
+   - Gap Restore (gamma=0.25) for variance preservation
+   - Ectomorphy kept as-is (HWR-derived, already accurate)
+   - Validated accuracy: 76.7% @ T=1.75 | 80.0% @ T=2.0
+
+9. **Body Fat Estimation** (`app/services/body_fat.py`)
+   - Durnin-Womersley + CUN-BAE dual estimation
+
+### Model Files (`app/ml_models/`)
+
+| Model | Files | Purpose |
+|-------|-------|---------|
+| CNN Extractor | `measurementExtractor_*.keras`, `scalerStd_extractor.pkl` | Proxy measurement extraction |
+| SVR V2.1 | `svr_skinfold_v2_1_*.pkl`, `*_metadata.json`, `*_calibration.json` | Skinfold prediction (4 targets) |
+| RF v2.2n | `rf_v2.2n_*.pkl`, `*_metadata.json`, `*_scaler_*.pkl` | Girth/breadth prediction |
+| G13 Calibration | `g13_*.pkl` | Skinfold domain adaptation (4 models) |
+| G38 Calibration | `g38_*.pkl`, `g38_humerus_offset.json` | Girth domain adaptation (3 models + offset) |
+| S5 Correction | `s5_endo_correction.pkl`, `s5_meso_correction.pkl`, `s5_gap_params.json` | Somatotype bias correction |
 
 6. **ZoeDepth Height Estimation** (`app/services/height_estimation.py`)
    - Predicts metric depth (meters) using ZoeDepth (ZoeD_N indoor model)

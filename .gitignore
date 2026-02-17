@@ -134,12 +134,12 @@ src-tauri/target/
 Thumbs.db
 
 # Project specific
-*.pkl
-*.keras
-*.h5
-!models/**/*.pkl
-!models/**/*.keras
-!models/**/*.h5
+# *.pkl
+# *.keras
+# *.h5
+# !models/**/*.pkl
+# !models/**/*.keras
+# !models/**/*.h5
 
 # Sisyphus (keep plans and notepads)
 .sisyphus/boulder.json

@@ -1,0 +1,70 @@
+{
+  "version": "v2.1",
+  "timestamp": "2026-02-09T01:55:48.172288",
+  "features": [
+    "Stature",
+    "Weight",
+    "Age",
+    "BMI",
+    "Ponderal_Index",
+    "Chest_Circumference",
+    "Hip_Circumference",
+    "Waist_Circumference",
+    "Thigh_Circumference",
+    "Waist_Hip_Ratio",
+    "Waist_Height_Ratio",
+    "Body_Fat_Pct",
+    "Fat_Mass",
+    "Lean_Mass",
+    "FFMI"
+  ],
+  "training_data": "Original CAESAR (Full)",
+  "metrics": {
+    "Triceps_Skinfold": {
+      "MAE_Raw": 7.561367045872071,
+      "MAE_Calibrated": 4.480840528710114,
+      "Improvement": 40.740338333974805
+    },
+    "Subscapular_Skinfold": {
+      "MAE_Raw": 6.32352564707051,
+      "MAE_Calibrated": 2.0962330930964166,
+      "Improvement": 66.85024762938164
+    },
+    "Supraspinale_Skinfold": {
+      "MAE_Raw": 10.294632769917373,
+      "MAE_Calibrated": 3.7582152204382777,
+      "Improvement": 63.49345037911011
+    },
+    "Calf_Skinfold": {
+      "MAE_Raw": 10.442045093702298,
+      "MAE_Calibrated": 4.033572424027791,
+      "Improvement": 61.371815694796425
+    }
+  },
+  "best_params": {
+    "Triceps_Skinfold": {
+      "svr__C": 1,
+      "svr__epsilon": 0.05,
+      "svr__gamma": 0.01,
+      "svr__kernel": "rbf"
+    },
+    "Subscapular_Skinfold": {
+      "svr__C": 1,
+      "svr__epsilon": 0.2,
+      "svr__gamma": 0.01,
+      "svr__kernel": "rbf"
+    },
+    "Supraspinale_Skinfold": {
+      "svr__C": 1,
+      "svr__epsilon": 0.05,
+      "svr__gamma": 0.01,
+      "svr__kernel": "rbf"
+    },
+    "Calf_Skinfold": {
+      "svr__C": 1,
+      "svr__epsilon": 0.01,
+      "svr__gamma": "auto",
+      "svr__kernel": "rbf"
+    }
+  }
+}
