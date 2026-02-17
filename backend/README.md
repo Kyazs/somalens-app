@@ -26,11 +26,18 @@ FastAPI backend with SQLModel, Celery, and JWT authentication for robust, scalab
 
 ## ML Pipeline Architecture
 
-SomaLens uses a multi-stage ML pipeline for somatotype estimation:
+SomaLens uses a multi-stage ML pipeline for somatotype estimation and height prediction:
 
-### Pipeline Flow
+### Somatotype Pipeline
+
 ```
 Input Image → DeepLabV3 Segmentation → Scale Normalization → CNN Extraction → Ultra V3 Prediction → Heath-Carter Somatotype
+```
+
+### Height Estimation Pipeline
+
+```
+Input Image → ZoeDepth Metric Depth → MediaPipe Pose Landmarks → Pinhole Camera Model → Height (cm)
 ```
 
 ### Components
@@ -59,19 +66,30 @@ Input Image → DeepLabV3 Segmentation → Scale Normalization → CNN Extractio
    - Calculates endomorphy, mesomorphy, ectomorphy
    - Classifies somatotype (e.g., "Mesomorph-Endomorph")
 
+6. **ZoeDepth Height Estimation** (`app/services/height_estimation.py`)
+   - Predicts metric depth (meters) using ZoeDepth (ZoeD_N indoor model)
+   - Detects head-top and feet via MediaPipe Pose Landmarker
+   - Calculates real height using the pinhole camera model
+   - Camera-profile auto-detection from image resolution
+
 ## Dependencies
 
-### PyTorch (New)
-The ML pipeline requires PyTorch for DeepLabV3 segmentation:
+### PyTorch
+
+The ML pipeline requires PyTorch for DeepLabV3 segmentation and ZoeDepth depth estimation:
+
 - `torch>=2.2.0` (CPU version)
 - `torchvision>=0.17.0`
 
-The Dockerfile automatically downloads DeepLabV3 weights during build.
-
 ### Other ML Dependencies
+
+- ZoeDepth (loaded via `torch.hub` from isl-org/ZoeDepth)
+- MediaPipe (Pose Landmarker Heavy for body landmark detection)
 - TensorFlow 2.16.1 (CNN model)
 - scikit-learn (SVR/RF models)
 - NumPy, Pillow (image processing)
+
+> **Note**: All ML model weights (~1.6GB total) are **pre-downloaded** via scripts rather than fetched during Docker builds. See [ML Model Setup](#ml-model-setup) below.
 
 ## API Changes
 
@@ -79,15 +97,16 @@ The Dockerfile automatically downloads DeepLabV3 weights during build.
 
 The `/api/v1/measurements` endpoint now requires additional demographic data:
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `height` | float | **Yes** | Height in cm |
-| `weight` | float | **Yes** | Weight in kg |
-| `age` | int | **Yes** | Age in years |
-| `gender` | string | **Yes** | "male" or "female" |
-| `waist_circumference` | float | Recommended | Waist in cm (improves accuracy) |
+| Field                 | Type   | Required    | Description                     |
+| --------------------- | ------ | ----------- | ------------------------------- |
+| `height`              | float  | **Yes**     | Height in cm                    |
+| `weight`              | float  | **Yes**     | Weight in kg                    |
+| `age`                 | int    | **Yes**     | Age in years                    |
+| `gender`              | string | **Yes**     | "male" or "female"              |
+| `waist_circumference` | float  | Recommended | Waist in cm (improves accuracy) |
 
 These fields are used for:
+
 - CNN input encoding (gender, stature)
 - Ultra V3 calibration (height, weight, age)
 - Fat factor modulation (waist-to-height ratio)
@@ -99,6 +118,32 @@ These fields are used for:
 - Docker Compose
 - Make
 
+## ML Model Setup
+
+ML models are **not** downloaded during Docker builds — they must be downloaded once using the provided scripts. This avoids unreliable network-dependent downloads during builds and speeds up iterations.
+
+```bash
+cd backend
+
+# Linux/macOS:
+bash scripts/download_models.sh
+
+# Windows (PowerShell):
+.\scripts\download_models.ps1
+```
+
+This downloads to `backend/ml_model_cache/` (~1.6GB total):
+
+| Model                            | Size     | Purpose                                       |
+| -------------------------------- | -------- | --------------------------------------------- |
+| ZoeDepth weights (ZoeD_M12_N.pt) | ~1.34 GB | Metric depth estimation for height prediction |
+| MiDaS repository                 | ~15 MB   | ZoeDepth dependency                           |
+| ZoeDepth repository              | ~10 MB   | Depth model architecture                      |
+| MediaPipe Pose Landmarker Heavy  | ~30 MB   | Body landmark detection                       |
+| DeepLabV3 ResNet101              | ~233 MB  | Person segmentation                           |
+
+> The `ml_model_cache/` directory is excluded from Git via `.gitignore`. In **development**, models are volume-mounted into the container. In **production**, they are COPY'd into the Docker image.
+
 ## Quick Start (Backend-Only Development)
 
 This Docker setup runs **backend only** with SQLite (no frontend, no PostgreSQL). Ideal for rapid backend iteration.
@@ -106,6 +151,7 @@ This Docker setup runs **backend only** with SQLite (no frontend, no PostgreSQL)
 ```bash
 cd backend
 cp .env.example .env
+bash scripts/download_models.sh  # One-time ML model download
 make dev        # Starts API + Celery + Redis with hot-reload
 make migrate    # Apply database migrations
 # Access API docs at http://localhost:8000/docs
@@ -113,30 +159,30 @@ make migrate    # Apply database migrations
 
 ## Makefile Commands
 
-| Command | Description |
-|---------|-------------|
-| `make dev` | Start development environment with Docker Compose |
-| `make prod` | Start production environment in detached mode |
-| `make migrate` | Run pending database migrations with Alembic |
-| `make migrate-create` | Create a new auto-generated database migration |
-| `make shell` | Open a bash shell inside the API container |
-| `make logs` | Stream logs from the API service |
-| `make celery-logs` | Stream logs from the Celery worker service |
-| `make redis-cli` | Access Redis CLI for cache inspection |
-| `make stop` | Stop all running containers |
-| `make clean` | Remove containers and persistent data volumes |
+| Command               | Description                                       |
+| --------------------- | ------------------------------------------------- |
+| `make dev`            | Start development environment with Docker Compose |
+| `make prod`           | Start production environment in detached mode     |
+| `make migrate`        | Run pending database migrations with Alembic      |
+| `make migrate-create` | Create a new auto-generated database migration    |
+| `make shell`          | Open a bash shell inside the API container        |
+| `make logs`           | Stream logs from the API service                  |
+| `make celery-logs`    | Stream logs from the Celery worker service        |
+| `make redis-cli`      | Access Redis CLI for cache inspection             |
+| `make stop`           | Stop all running containers                       |
+| `make clean`          | Remove containers and persistent data volumes     |
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `JWT_SECRET_KEY` | Secret key for JWT token signing (change in production) |
-| `JWT_ALGORITHM` | Algorithm for JWT encoding (default: HS256) |
-| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token expiration time in minutes |
-| `REFRESH_TOKEN_EXPIRE_DAYS` | Refresh token expiration time in days |
-| `DATABASE_URL` | SQLite database connection URL |
-| `REDIS_URL` | Redis connection URL for task queue |
-| `DEBUG` | Debug mode (set to false in production) |
+| Variable                      | Description                                             |
+| ----------------------------- | ------------------------------------------------------- |
+| `JWT_SECRET_KEY`              | Secret key for JWT token signing (change in production) |
+| `JWT_ALGORITHM`               | Algorithm for JWT encoding (default: HS256)             |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | Access token expiration time in minutes                 |
+| `REFRESH_TOKEN_EXPIRE_DAYS`   | Refresh token expiration time in days                   |
+| `DATABASE_URL`                | SQLite database connection URL                          |
+| `REDIS_URL`                   | Redis connection URL for task queue                     |
+| `DEBUG`                       | Debug mode (set to false in production)                 |
 
 ## Project Structure
 
@@ -166,28 +212,52 @@ For more information, check the API documentation at `/docs` once the server is 
 ### Common Issues
 
 **PyTorch not found**
+
 ```
 ModuleNotFoundError: No module named 'torch'
 ```
+
 Solution: Ensure you're using the Docker image or install PyTorch manually:
+
 ```bash
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
 ```
 
 **DeepLabV3 model not loading**
+
 ```
 Error loading segmentation model
 ```
-Solution: The model should be baked into Docker. If running locally:
+
+Solution: Ensure ML models are downloaded first via `scripts/download_models.sh` (or `.ps1`). If running locally without Docker, the model will auto-download on first use. You can also manually trigger it:
+
 ```python
 import torch
 torch.hub.load('pytorch/vision:v0.10.0', 'deeplabv3_resnet101', pretrained=True)
 ```
 
+**ZoeDepth model fails to load**
+
+```
+RuntimeError: Unexpected key / Missing key in state_dict
+```
+
+Solution: This is a `timm` version mismatch. The height estimation service handles this automatically with `strict=False` loading, but ensure you have downloaded models via `scripts/download_models.sh`. If issues persist, delete `ml_model_cache/zoedepth/` and re-run the download script.
+
+**MediaPipe pose detection fails**
+
+```
+FileNotFoundError: pose_landmarker_heavy.task not found
+```
+
+Solution: Run `scripts/download_models.sh` (or `.ps1`) to download the MediaPipe Pose Landmarker model. In development, it will auto-download on first use as a fallback.
+
 **Missing demographic data**
+
 ```
 ValueError: Missing required field: height
 ```
+
 Solution: Ensure all required fields are provided in the API request.
 
 **Segmentation returns empty mask**
