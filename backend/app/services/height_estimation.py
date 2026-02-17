@@ -41,17 +41,15 @@ ZOEDEPTH_CACHE_DIR = MODEL_CACHE_DIR / "zoedepth"
 MEDIAPIPE_CACHE_DIR = MODEL_CACHE_DIR / "mediapipe"
 
 # MediaPipe for pose landmarks (still needed for head/feet detection)
-from mediapipe.tasks.python.core import base_options as base_options_module
-from mediapipe.tasks.python.vision import pose_landmarker as pose_landmarker_module
-from mediapipe.tasks.python.vision.core import image as image_module
-from mediapipe.tasks.python.vision.core import vision_task_running_mode as running_mode_module
+import mediapipe as mp
 
-# Aliases
-_BaseOptions = base_options_module.BaseOptions
-_PoseLandmarker = pose_landmarker_module.PoseLandmarker
-_PoseLandmarkerOptions = pose_landmarker_module.PoseLandmarkerOptions
-_Image = image_module.Image
-_RunningMode = running_mode_module.VisionTaskRunningMode
+# Aliases using the standard mediapipe public API
+_BaseOptions = mp.tasks.BaseOptions
+_PoseLandmarker = mp.tasks.vision.PoseLandmarker
+_PoseLandmarkerOptions = mp.tasks.vision.PoseLandmarkerOptions
+_Image = mp.Image
+_ImageFormat = mp.ImageFormat
+_RunningMode = mp.tasks.vision.RunningMode
 
 # MediaPipe model URL
 POSE_LANDMARKER_MODEL_URL = "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_heavy/float16/latest/pose_landmarker_heavy.task"
@@ -75,14 +73,14 @@ CAMERA_PROFILES = {
         'landscape_height': 2464,
     },
     'main': {
-        'fov_degrees': 73.7,       # Calibrated effective FOV for ZoeDepth (pad_input=False)
+        'fov_degrees': 65,       # Calibrated effective FOV for ZoeDepth (pad_input=False)
         'landscape_width': 4096,
         'landscape_height': 3072,
     },
 }
 
 # Default fallback FOV when image dimensions don't match any known profile
-DEFAULT_FALLBACK_FOV = 73.7
+DEFAULT_FALLBACK_FOV = 65
 
 
 @dataclass
@@ -217,13 +215,23 @@ class ZoeDepthHeightEstimator:
     def _ensure_mediapipe_model(self) -> str:
         """Download MediaPipe model if not cached."""
         MEDIAPIPE_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        filename = "pose_landmarker_pose_landmarker_heavy.task"
-        filepath = MEDIAPIPE_CACHE_DIR / filename
         
-        if not filepath.exists():
-            print(f"Downloading MediaPipe PoseLandmarker model...")
-            urllib.request.urlretrieve(POSE_LANDMARKER_MODEL_URL, filepath)
-            print(f"Downloaded to: {filepath}")
+        # Check both filename variants (download script vs old Docker curl naming)
+        filenames = [
+            "pose_landmarker_heavy.task",
+            "pose_landmarker_pose_landmarker_heavy.task",
+        ]
+        
+        for filename in filenames:
+            filepath = MEDIAPIPE_CACHE_DIR / filename
+            if filepath.exists():
+                return str(filepath)
+        
+        # Not found — download to the standard name
+        filepath = MEDIAPIPE_CACHE_DIR / filenames[0]
+        print(f"Downloading MediaPipe PoseLandmarker model...")
+        urllib.request.urlretrieve(POSE_LANDMARKER_MODEL_URL, filepath)
+        print(f"Downloaded to: {filepath}")
         
         return str(filepath)
     
@@ -232,75 +240,108 @@ class ZoeDepthHeightEstimator:
         if self._zoedepth_model is not None:
             return
         
-        print(f"Loading ZoeDepth model ({self.model_name} for {self.model_type})...")
-        print(f"Device: {self.device}")
+        import logging
+        logger = logging.getLogger(__name__)
         
-        # Set cache directory
+        logger.info(f"Loading ZoeDepth model ({self.model_name} for {self.model_type})...")
+        logger.info(f"Device: {self.device}")
+        
+        # Set ZoeDepth-specific hub cache directory WITHOUT affecting global TORCH_HOME
+        # (global TORCH_HOME override breaks DeepLabV3 which expects /app/data/torch)
         ZOEDEPTH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        os.environ['TORCH_HOME'] = str(ZOEDEPTH_CACHE_DIR)
+        zoedepth_hub_dir = str(ZOEDEPTH_CACHE_DIR / "hub")
         
-        # Warm up MiDaS dependency (may print warnings, that's OK)
-        try:
-            torch.hub.help("intel-isl/MiDaS", "DPT_BEiT_L_384")
-        except Exception:
-            pass  # May fail if already cached
+        # Save and set hub directory
+        old_hub_dir = torch.hub.get_dir()
+        torch.hub.set_dir(zoedepth_hub_dir)
+        
+        # Log what's available in the cache for debugging
+        checkpoints_dir = ZOEDEPTH_CACHE_DIR / "hub" / "checkpoints"
+        if checkpoints_dir.exists():
+            cached_files = list(checkpoints_dir.glob("*.pt"))
+            logger.info(f"ZoeDepth checkpoints dir has {len(cached_files)} .pt files: {[f.name for f in cached_files]}")
+        else:
+            logger.warning(f"ZoeDepth checkpoints dir does not exist: {checkpoints_dir}")
         
         try:
-            # Try normal loading first
-            self._zoedepth_model = torch.hub.load(
-                "isl-org/ZoeDepth", 
-                self.model_name, 
-                pretrained=True,
-                trust_repo=True
-            )
-        except RuntimeError as e:
-            if "Unexpected key" in str(e) or "Missing key" in str(e):
-                print("Detected timm version mismatch. Applying compatibility fix...")
-                
-                # Load model structure without pretrained weights
+            # Warm up MiDaS dependency (may print warnings, that's OK)
+            try:
+                torch.hub.help("intel-isl/MiDaS", "DPT_BEiT_L_384", trust_repo=True)
+            except Exception:
+                pass  # May fail if already cached
+            
+            try:
+                # Try normal loading first
                 self._zoedepth_model = torch.hub.load(
                     "isl-org/ZoeDepth", 
                     self.model_name, 
-                    pretrained=False,
+                    pretrained=True,
                     trust_repo=True
                 )
-                
-                # Map model name to weights filename/URL
-                weights_map = {
-                    'ZoeD_N': ("ZoeD_M12_N.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_N.pt"),
-                    'ZoeD_K': ("ZoeD_M12_K.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_K.pt"),
-                    'ZoeD_NK': ("ZoeD_M12_NK.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_NK.pt")
-                }
-                
-                filename, url = weights_map.get(self.model_name, (None, None))
-                if not filename:
-                    raise ValueError(f"Unknown weights for model: {self.model_name}")
-                
-                # Download and load weights manually with strict=False
-                weights_path = ZOEDEPTH_CACHE_DIR / "hub" / "checkpoints" / filename
-                
-                if not weights_path.exists():
-                    print(f"Downloading weights to {weights_path}...")
-                    weights_path.parent.mkdir(parents=True, exist_ok=True)
-                    torch.hub.download_url_to_file(url, str(weights_path))
-                
-                # Load state dict with strict=False to ignore mismatched keys
-                state_dict = torch.load(str(weights_path), map_location='cpu', weights_only=False)
-                if 'model' in state_dict:
-                    state_dict = state_dict['model']
-                
-                # Load with strict=False (ignores unexpected/missing keys)
-                missing, unexpected = self._zoedepth_model.load_state_dict(state_dict, strict=False)
-                
-                if unexpected:
-                    print(f"  Ignored {len(unexpected)} unexpected keys (timm version difference)")
-                if missing:
-                    print(f"  Warning: {len(missing)} missing keys")
-            else:
-                raise e
-        
-        self._zoedepth_model = self._zoedepth_model.to(self.device).eval()
-        print(f"ZoeDepth model ({self.model_name}) loaded successfully!")
+            except RuntimeError as e:
+                if "Unexpected key" in str(e) or "Missing key" in str(e):
+                    logger.warning("Detected timm version mismatch. Applying compatibility fix...")
+                    
+                    # Load model structure without pretrained weights
+                    self._zoedepth_model = torch.hub.load(
+                        "isl-org/ZoeDepth", 
+                        self.model_name, 
+                        pretrained=False,
+                        trust_repo=True
+                    )
+                    
+                    # Map model name to weights filename/URL
+                    weights_map = {
+                        'ZoeD_N': ("ZoeD_M12_N.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_N.pt"),
+                        'ZoeD_K': ("ZoeD_M12_K.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_K.pt"),
+                        'ZoeD_NK': ("ZoeD_M12_NK.pt", "https://github.com/isl-org/ZoeDepth/releases/download/v1.0/ZoeD_M12_NK.pt")
+                    }
+                    
+                    filename, url = weights_map.get(self.model_name, (None, None))
+                    if not filename:
+                        raise ValueError(f"Unknown weights for model: {self.model_name}")
+                    
+                    # Download and load weights manually with strict=False
+                    weights_path = ZOEDEPTH_CACHE_DIR / "hub" / "checkpoints" / filename
+                    
+                    if not weights_path.exists():
+                        logger.info(f"Downloading weights to {weights_path}...")
+                        weights_path.parent.mkdir(parents=True, exist_ok=True)
+                        torch.hub.download_url_to_file(url, str(weights_path))
+                    
+                    # Load state dict with strict=False to ignore mismatched keys
+                    state_dict = torch.load(str(weights_path), map_location='cpu', weights_only=False)
+                    if 'model' in state_dict:
+                        state_dict = state_dict['model']
+                    
+                    # Load with strict=False (ignores unexpected/missing keys)
+                    missing, unexpected = self._zoedepth_model.load_state_dict(state_dict, strict=False)
+                    
+                    if unexpected:
+                        logger.info(f"  Ignored {len(unexpected)} unexpected keys (timm version difference)")
+                    if missing:
+                        logger.warning(f"  Warning: {len(missing)} missing keys")
+                else:
+                    raise e
+            
+            self._zoedepth_model = self._zoedepth_model.to(self.device).eval()
+            
+            # Monkey-patch for newer timm versions where Block.drop_path was
+            # split into drop_path1/drop_path2. ZoeDepth/MiDaS code expects
+            # the old single drop_path attribute.
+            patched_count = 0
+            for module in self._zoedepth_model.modules():
+                if hasattr(module, 'drop_path1') and not hasattr(module, 'drop_path'):
+                    module.drop_path = module.drop_path1
+                    patched_count += 1
+            if patched_count:
+                logger.info(f"  Patched {patched_count} Block modules with drop_path compatibility shim")
+            
+            logger.info(f"ZoeDepth model ({self.model_name}) loaded successfully!")
+        finally:
+            # Always restore the original hub directory so DeepLabV3 and other
+            # models can find their cached weights at the expected TORCH_HOME location
+            torch.hub.set_dir(old_hub_dir)
     
     def _load_pose(self):
         """Load MediaPipe PoseLandmarker (lazy loading)."""
@@ -325,7 +366,7 @@ class ZoeDepthHeightEstimator:
     def _image_to_mp_image(self, image: np.ndarray) -> _Image:
         """Convert OpenCV BGR image to MediaPipe Image."""
         image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        return _Image(image_format=image_module.ImageFormat.SRGB, data=image_rgb)
+        return _Image(image_format=_ImageFormat.SRGB, data=image_rgb)
     
     def get_depth_map(self, image: np.ndarray) -> np.ndarray:
         """
