@@ -1,0 +1,26 @@
+{
+  "Triceps_Skinfold": {
+    "pred_coef": 0.0,
+    "height_coef": -0.033128398995980815,
+    "weight_coef": 0.47739451432693136,
+    "intercept": 36.632599206564684
+  },
+  "Subscapular_Skinfold": {
+    "pred_coef": 0.0,
+    "height_coef": -0.03605550322463169,
+    "weight_coef": 0.4504312787153512,
+    "intercept": 45.636250234761235
+  },
+  "Supraspinale_Skinfold": {
+    "pred_coef": 0.0,
+    "height_coef": -0.0565772807322458,
+    "weight_coef": 0.6182409029701766,
+    "intercept": 70.00268175796874
+  },
+  "Calf_Skinfold": {
+    "pred_coef": 0.0,
+    "height_coef": -0.028423991364140852,
+    "weight_coef": 0.4473372632539481,
+    "intercept": 34.20500168103257
+  }
+}
