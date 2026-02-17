@@ -25,7 +25,7 @@ services:
       - ./backend/ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     user: root
     command: >
-      sh -c "chown -R appuser:appgroup /app/uploads && 
+      sh -c "chown -R appuser:appgroup /app/uploads /app/app/ml_models/zoedepth && 
              exec su appuser -s /bin/sh -c 'uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4'"
     depends_on:
       db:
@@ -54,7 +54,7 @@ services:
       - ./backend/ml_model_cache/mediapipe:/app/app/ml_models/mediapipe:ro
     user: root
     command: >
-      sh -c "chown -R appuser:appgroup /app/uploads && 
+      sh -c "chown -R appuser:appgroup /app/uploads /app/app/ml_models/zoedepth && 
              exec su appuser -s /bin/sh -c 'celery -A app.celery_worker worker --loglevel=info --concurrency=4'"
     depends_on:
       api:
