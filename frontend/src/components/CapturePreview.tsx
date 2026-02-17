@@ -79,7 +79,7 @@ export const CapturePreview: React.FC = () => {
     try {
       const age = parseInt(userData.age) || 25;
       const height = userData.heightMode === 'predicted' ? 0 : parseFloat(userData.height);
-      const weight = parseInt(userData.weight);
+      const weight = parseFloat(userData.weight);
 
       if (userData.heightMode === 'input' && (isNaN(height) || height <= 0)) {
         throw new Error("Missing height data");
@@ -143,7 +143,7 @@ export const CapturePreview: React.FC = () => {
             </div>
             <h3 className="text-2xl font-bold text-slate-900 mb-3">Analyzing Your Body</h3>
             <p className="text-teal-600 text-lg font-medium mb-2">{processingStatus}</p>
-            <p className="text-slate-400 text-sm">This may take up to 30 seconds</p>
+            <p className="text-slate-400 text-sm">This may take 2-5 minutes on first run</p>
           </div>
         </div>
       )}

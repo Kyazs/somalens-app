@@ -237,7 +237,7 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
     }
     
     const age = parseInt(displayAge);
-    const weight = parseInt(userData.weight);
+    const weight = parseFloat(userData.weight);
 
     if (isNaN(age) || age < 10 || age > 100) {
       setError("Age must be between 10 and 100 years");
@@ -366,13 +366,13 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                                         <p className="text-sm font-semibold text-amber-800 mb-1">AI Height Prediction</p>
                                         <p className="text-xs text-amber-700 leading-relaxed">
                                             Your height will be estimated from your front photo using 
-                                            <strong>AI depth analysis (ZoeDepth)</strong>. This prediction 
+                                            <strong> AI depth analysis (ZoeDepth)</strong>. This prediction 
                                             typically has <strong>±3–5 cm accuracy</strong> and may vary 
                                             depending on lighting, camera angle, and distance.
                                         </p>
                                         <p className="text-xs text-amber-600 mt-2 leading-relaxed">
                                             <strong>Tips for best results:</strong> Stand at full height in a 
-                                            well-lit indoor space, 1.5–3 meters from the camera, with your 
+                                            well-lit indoor space, 4-5 feet from the camera, with your 
                                             full body visible from head to toe.
                                         </p>
                                     </div>
@@ -380,16 +380,17 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                             </div>
                         )}
                     </div>
-                    <div>
+                    <div className="col-span-2">
                         <label className="block text-sm font-medium text-slate-700 mb-2">Weight (kg)</label>
                         <input 
                             type="number" 
                             required
                             min="30" max="200"
+                            step="any"
                             value={userData.weight}
                             onChange={e => setUserData({ weight: e.target.value })}
                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-900 focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500 outline-none transition-all"
-                            placeholder="70"
+                            placeholder="70.5"
                         />
                     </div>
                 </div>
