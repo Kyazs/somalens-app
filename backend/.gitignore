@@ -51,3 +51,6 @@ Thumbs.db
 # User Data
 uploads/
 data/
+
+# Pre-downloaded ML models (too large for Git, ~1.6GB)
+ml_model_cache/
