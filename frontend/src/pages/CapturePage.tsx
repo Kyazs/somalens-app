@@ -446,6 +446,64 @@ const SetupForm = ({ onComplete }: { onComplete: () => void }) => {
                         </select>
                     </div>
                 </div>
+
+                {/* Medical Conditions Checklist */}
+                <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                        Medical Conditions <span className="text-slate-400 font-normal">(optional)</span>
+                    </label>
+                    <p className="text-xs text-slate-400 mb-3">Select any conditions that apply — recommendations will be adjusted accordingly.</p>
+                    <div className="flex flex-wrap gap-2">
+                        {/* None option */}
+                        <button
+                            type="button"
+                            onClick={() => setUserData({ medicalConditions: [] })}
+                            className={`
+                                px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200
+                                ${userData.medicalConditions.length === 0
+                                    ? 'bg-teal-50 border-teal-300 text-teal-700'
+                                    : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}
+                            `}
+                        >
+                            ✓ None
+                        </button>
+                        {/* Condition pills */}
+                        {[
+                            { id: 'diabetes', label: 'Diabetes', icon: '🩸' },
+                            { id: 'hypertension', label: 'Hypertension', icon: '💓' },
+                            { id: 'high_cholesterol', label: 'High Cholesterol', icon: '🫀' },
+                            { id: 'pcos', label: 'PCOS', icon: '🩺' },
+                            { id: 'kidney_disease', label: 'Kidney Disease', icon: '🫘' },
+                            { id: 'gout', label: 'Gout', icon: '🦴' },
+                            { id: 'heart_disease', label: 'Heart Disease', icon: '❤️‍🩹' },
+                            { id: 'obesity_related', label: 'Obesity-Related', icon: '⚖️' },
+                        ].map(cond => {
+                            const isSelected = userData.medicalConditions.includes(cond.id);
+                            return (
+                                <button
+                                    key={cond.id}
+                                    type="button"
+                                    onClick={() => {
+                                        const current = userData.medicalConditions;
+                                        if (isSelected) {
+                                            setUserData({ medicalConditions: current.filter(c => c !== cond.id) });
+                                        } else {
+                                            setUserData({ medicalConditions: [...current, cond.id] });
+                                        }
+                                    }}
+                                    className={`
+                                        px-3 py-1.5 rounded-full text-sm font-medium border transition-all duration-200
+                                        ${isSelected
+                                            ? 'bg-amber-50 border-amber-300 text-amber-700 shadow-sm'
+                                            : 'bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100'}
+                                    `}
+                                >
+                                    {cond.icon} {cond.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
             </div>
 
             <button
