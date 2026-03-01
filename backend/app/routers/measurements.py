@@ -27,6 +27,7 @@ async def analyze_measurements(
     height: Optional[float] = Form(None),
     weight: float = Form(...),
     name: Optional[str] = Form(None),
+    medical_conditions: Optional[str] = Form(None),
 ):
     """
     Analyze body measurements from front and side images.
@@ -62,6 +63,11 @@ async def analyze_measurements(
     front_url = f"/static/{front_filename}"
     side_url = f"/static/{side_filename}"
 
+    # Parse medical conditions
+    conditions_list = [
+        c.strip() for c in medical_conditions.split(",") if c.strip()
+    ] if medical_conditions else []
+
     # Create Measurement record
     measurement = Measurement(
         user_id=current_user.id,
@@ -72,6 +78,7 @@ async def analyze_measurements(
         gender=gender,
         height=height,
         weight=weight,
+        medical_conditions=conditions_list if conditions_list else None,
         # status="pending" # Implicit status based on missing results
     )
     session.add(measurement)

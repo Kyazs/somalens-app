@@ -55,6 +55,7 @@ export interface MeasurementSession {
   somatotype_class: string | null;
   body_fat_percentage: number | null;
   circumferences: Record<string, number> | null;
+  medical_conditions?: string[] | null;
   created_at: string;
 }
 

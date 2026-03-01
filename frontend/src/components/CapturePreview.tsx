@@ -95,7 +95,8 @@ export const CapturePreview: React.FC = () => {
         userData.gender,
         height > 0 ? height : undefined,
         weight,
-        userData.name || undefined
+        userData.name || undefined,
+        userData.medicalConditions
       );
       
       const measurementId = (submitResponse as unknown as { id: number }).id;
@@ -115,6 +116,7 @@ export const CapturePreview: React.FC = () => {
             activityLevel: userData.activityLevel,
             exerciseComplexity: userData.exerciseComplexity,
             exerciseType: userData.exerciseType,
+            medicalConditions: userData.medicalConditions,
           },
           userInfo: {
             name: userData.name || null,

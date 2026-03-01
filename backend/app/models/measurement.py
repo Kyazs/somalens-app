@@ -3,6 +3,7 @@ from typing import Optional, Dict, Any
 
 from sqlalchemy import JSON, Column
 from sqlmodel import Field, SQLModel
+from typing import Optional, Dict, Any, List
 
 
 class MeasurementBase(SQLModel):
@@ -21,6 +22,7 @@ class MeasurementBase(SQLModel):
     somatotype_class: Optional[str] = None
     body_fat_percentage: Optional[float] = None
     circumferences: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
+    medical_conditions: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
 
 
 class Measurement(MeasurementBase, table=True):

@@ -69,6 +69,7 @@ export function HistoryPage() {
           activityLevel: 'moderate',
           exerciseComplexity: 'beginner',
           exerciseType: 'gym',
+          medicalConditions: session.medical_conditions || [],
         },
         userInfo: {
           name: session.name,

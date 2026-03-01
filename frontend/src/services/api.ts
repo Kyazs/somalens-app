@@ -86,6 +86,8 @@ export interface FoodItem {
   sodium_mg: number;
   portion_recommendation: string;
   meal_timing: string;
+  flagged?: boolean;
+  warnings?: string[];
 }
 
 export interface MealRecommendationsWithNutrients {
@@ -103,6 +105,8 @@ export interface ExerciseInfo {
   bodyParts: string[];
   equipments: string[];
   instructions: string[];
+  flagged?: boolean;
+  warnings?: string[];
 }
 
 export interface RecommendationResponse {
@@ -122,6 +126,9 @@ export interface RecommendationResponse {
   somatotype_description?: string;
   message?: string;
   suggestion?: string;
+  medical_conditions?: string[];
+  exercise_warnings?: string[];
+  medical_notes?: string[];
 }
 
 const axiosInstance: AxiosInstance = axios.create({
@@ -237,7 +244,8 @@ getMe: async (): Promise<UserResponse> => {
     gender: 'male' | 'female',
     heightCm: number | undefined,
     weightKg: number,
-    name?: string
+    name?: string,
+    medicalConditions?: string[]
   ): Promise<AnalysisResponse> => {
     const formData = new FormData();
     formData.append('front_image', frontImage, 'front.jpg');
@@ -249,6 +257,9 @@ getMe: async (): Promise<UserResponse> => {
     }
     formData.append('weight', weightKg.toString());
     if (name) formData.append('name', name);
+    if (medicalConditions && medicalConditions.length > 0) {
+      formData.append('medical_conditions', medicalConditions.join(','));
+    }
 
     const response = await axiosInstance.post<AnalysisResponse>('/measurements/analyze', formData, {
       headers: {
@@ -321,7 +332,8 @@ getMe: async (): Promise<UserResponse> => {
     goal: string,
     activityLevel: string,
     exerciseComplexity: string,
-    exerciseType: string
+    exerciseType: string,
+    medicalConditions: string[] = []
   ): Promise<RecommendationResponse> => {
     const params = new URLSearchParams({
       goal,
@@ -329,6 +341,9 @@ getMe: async (): Promise<UserResponse> => {
       exercise_complexity: exerciseComplexity,
       exercise_type: exerciseType,
     });
+    if (medicalConditions.length > 0) {
+      params.set('medical_conditions', medicalConditions.join(','));
+    }
     const response = await axiosInstance.get<RecommendationResponse>(
       `/recommendations/${measurementId}?${params.toString()}`
     );
