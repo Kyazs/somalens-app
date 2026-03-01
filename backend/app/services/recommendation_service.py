@@ -7,6 +7,12 @@ from app.services.data_loader import (
     get_exercises_by_ids,
     parse_foods_with_nutrients,
 )
+from app.services.medical_conditions import (
+    filter_foods_by_conditions,
+    filter_exercises_by_conditions,
+    get_exercise_warnings,
+    get_medical_notes,
+)
 
 
 def calculate_dbw(height_cm: float) -> float:
@@ -60,6 +66,7 @@ def get_recommendation(
     exercise_type: str,
     height_cm: float,
     weight_kg: float,
+    medical_conditions: list[str] | None = None,
 ) -> Optional[dict]:
     template = get_template(
         somatotype, gender, goal, activity_level, exercise_complexity, exercise_type
@@ -67,6 +74,8 @@ def get_recommendation(
 
     if not template:
         return None
+
+    conditions = medical_conditions or []
 
     ter = calculate_ter(weight_kg, height_cm, activity_level, goal)
     macros = calculate_macros(
@@ -83,6 +92,11 @@ def get_recommendation(
         "snacks": parse_foods_with_nutrients(template.get("snack_foods", "")),
     }
 
+    # Apply medical condition filtering to each meal
+    if conditions:
+        for meal_key in meals:
+            meals[meal_key] = filter_foods_by_conditions(meals[meal_key], conditions)
+
     if exercise_type == "gym":
         exercises_ppl = {
             "push": get_exercises_by_ids(parse_ids(template.get("push_exercises", ""))),
@@ -90,11 +104,19 @@ def get_recommendation(
             "legs": get_exercises_by_ids(parse_ids(template.get("legs_exercises", ""))),
         }
         exercises = None
+        
+        if conditions:
+            exercises_ppl["push"] = filter_exercises_by_conditions(exercises_ppl["push"], conditions)
+            exercises_ppl["pull"] = filter_exercises_by_conditions(exercises_ppl["pull"], conditions)
+            exercises_ppl["legs"] = filter_exercises_by_conditions(exercises_ppl["legs"], conditions)
     else:
         exercises = get_exercises_by_ids(parse_ids(template.get("bodyweight_exercises", "")))
         exercises_ppl = None
+        
+        if conditions:
+            exercises = filter_exercises_by_conditions(exercises, conditions)
 
-    return {
+    result = {
         "template_id": template.get("template_id"),
         "ter": ter,
         "macros": macros,
@@ -106,3 +128,15 @@ def get_recommendation(
         "exercise_type": exercise_type,
         "somatotype_description": template.get("description", ""),
     }
+
+    # Add medical condition data if conditions are selected
+    if conditions:
+        result["medical_conditions"] = conditions
+        result["exercise_warnings"] = get_exercise_warnings(conditions)
+        result["medical_notes"] = get_medical_notes(conditions)
+    else:
+        result["medical_conditions"] = []
+        result["exercise_warnings"] = []
+        result["medical_notes"] = []
+
+    return result
