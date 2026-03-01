@@ -21,6 +21,7 @@ async def get_measurement_recommendation(
     activity_level: str = Query(...),
     exercise_complexity: str = Query(...),
     exercise_type: str = Query(...),
+    medical_conditions: str = Query(""),
 ):
     measurement = session.get(Measurement, measurement_id)
     if not measurement:
@@ -34,6 +35,11 @@ async def get_measurement_recommendation(
             status_code=400, detail="Measurement analysis not complete"
         )
 
+    # Parse comma-separated medical conditions string into a list
+    conditions_list = [
+        c.strip() for c in medical_conditions.split(",") if c.strip()
+    ] if medical_conditions else []
+
     recommendation = get_recommendation(
         somatotype=measurement.somatotype_class,
         gender=measurement.gender or "male",
@@ -43,6 +49,7 @@ async def get_measurement_recommendation(
         exercise_type=exercise_type,
         height_cm=measurement.height or 170,
         weight_kg=measurement.weight or 70,
+        medical_conditions=conditions_list,
     )
 
     if not recommendation:

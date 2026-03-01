@@ -17,6 +17,7 @@ interface LocationState {
     activityLevel: string;
     exerciseComplexity: string;
     exerciseType: string;
+    medicalConditions?: string[];
   };
   userInfo?: {
     name: string | null;
@@ -98,7 +99,8 @@ export function ResultsPage() {
         preferences.goal,
         preferences.activityLevel,
         preferences.exerciseComplexity,
-        preferences.exerciseType
+        preferences.exerciseType,
+        preferences.medicalConditions || []
       )
         .then(setRecommendation)
         .catch((err) => setRecError(err.message || 'Failed to load recommendations'))
@@ -471,6 +473,49 @@ export function ResultsPage() {
                 </div>
               </div>
 
+              {/* Health Considerations (Medical Conditions) */}
+              {recommendation.medical_conditions && recommendation.medical_conditions.length > 0 && (
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl shadow-sm border border-amber-200 p-6">
+                  <h3 className="text-lg font-bold mb-4 text-amber-900 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                      <line x1="12" y1="9" x2="12" y2="13"/>
+                      <line x1="12" y1="17" x2="12.01" y2="17"/>
+                    </svg>
+                    Health Considerations
+                  </h3>
+                  <p className="text-xs text-amber-600 mb-4">Your recommendations have been adjusted for your selected conditions. Always consult your healthcare provider.</p>
+                  
+                  {/* Medical Notes */}
+                  {recommendation.medical_notes && recommendation.medical_notes.length > 0 && (
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-3">Dietary Adjustments</h4>
+                      <div className="space-y-2">
+                        {recommendation.medical_notes.map((note, i) => (
+                          <div key={i} className="bg-white/60 border border-amber-100 rounded-lg p-3">
+                            <p className="text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: note.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Exercise Warnings */}
+                  {recommendation.exercise_warnings && recommendation.exercise_warnings.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-bold text-amber-800 uppercase tracking-wider mb-3">Exercise Precautions</h4>
+                      <div className="space-y-2">
+                        {recommendation.exercise_warnings.map((warning, i) => (
+                          <div key={i} className="bg-white/60 border border-amber-100 rounded-lg p-3">
+                            <p className="text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: warning.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ROW 4: Foods (Full Width) */}
               {recommendation.meals && (
                 <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
@@ -484,9 +529,15 @@ export function ResultsPage() {
                             <button
                               key={i}
                               onClick={() => setSelectedFood(food)}
-                              className="bg-white border border-slate-200 rounded-lg px-3 py-2 cursor-pointer hover:bg-teal-50 hover:border-teal-200 hover:shadow-sm transition-all text-left group"
+                              className={`bg-white border rounded-lg px-3 py-2 cursor-pointer hover:shadow-sm transition-all text-left group ${
+                                food.flagged
+                                  ? 'border-amber-300 hover:bg-amber-50 hover:border-amber-400'
+                                  : 'border-slate-200 hover:bg-teal-50 hover:border-teal-200'
+                              }`}
                             >
-                              <span className="block text-sm font-bold text-slate-700 group-hover:text-teal-700">{food.name}</span>
+                              <span className={`block text-sm font-bold ${food.flagged ? 'text-amber-700 group-hover:text-amber-800' : 'text-slate-700 group-hover:text-teal-700'}`}>
+                                {food.flagged && '⚠️ '}{food.name}
+                              </span>
                               <span className="block text-[10px] text-slate-400">{food.calories_kcal.toFixed(0)} kcal</span>
                             </button>
                           ))}
@@ -623,6 +674,16 @@ export function ResultsPage() {
                 </button>
               </div>
 
+              {/* Food warnings for medical conditions */}
+              {selectedFood.flagged && selectedFood.warnings && selectedFood.warnings.length > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                  <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">Health Warnings</p>
+                  {selectedFood.warnings.map((w, i) => (
+                    <p key={i} className="text-xs text-amber-700 mb-1">{w}</p>
+                  ))}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-4 mb-6">
                 <div className="bg-slate-50 p-3 rounded-xl text-center">
                   <p className="text-3xl font-black text-slate-900">{selectedFood.calories_kcal.toFixed(0)}</p>
@@ -688,6 +749,16 @@ export function ResultsPage() {
                   </button>
                 </div>
 
+                {/* Exercise warnings for medical conditions */}
+                {selectedExercise.flagged && selectedExercise.warnings && selectedExercise.warnings.length > 0 && (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
+                    <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">Health Warnings</p>
+                    {selectedExercise.warnings.map((w, i) => (
+                      <p key={i} className="text-xs text-amber-700 mb-1" dangerouslySetInnerHTML={{ __html: w.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                    ))}
+                  </div>
+                )}
+
                 <div className="flex flex-wrap gap-2 mb-6">
                   {selectedExercise.targetMuscles.map(m => (
                     <span key={m} className="px-2 py-1 bg-teal-50 text-teal-700 text-xs font-bold rounded-md uppercase">
@@ -739,16 +810,26 @@ function ExerciseThumbnail({ exercise, onClick }: { exercise: ExerciseInfo; onCl
   return (
     <div 
       onClick={onClick}
-      className="group bg-white border border-slate-200 rounded-xl p-3 cursor-pointer hover:border-teal-400 hover:shadow-md transition-all flex items-center gap-4"
+      className={`group bg-white border rounded-xl p-3 cursor-pointer transition-all flex items-center gap-4 ${
+        exercise.flagged 
+          ? 'border-amber-300 hover:border-amber-400 hover:shadow-md hover:bg-amber-50' 
+          : 'border-slate-200 hover:border-teal-400 hover:shadow-md'
+      }`}
     >
       <div className="w-16 h-16 bg-slate-100 rounded-lg overflow-hidden flex-shrink-0">
         <img src={exercise.gifUrl} alt={exercise.name} className="w-full h-full object-cover mix-blend-multiply" />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-bold text-slate-900 text-sm truncate group-hover:text-teal-700 transition-colors">{exercise.name}</h4>
+        <h4 className={`font-bold text-sm truncate transition-colors ${
+          exercise.flagged ? 'text-amber-700 group-hover:text-amber-800' : 'text-slate-900 group-hover:text-teal-700'
+        }`}>
+          {exercise.flagged && '⚠️ '}{exercise.name}
+        </h4>
         <div className="flex flex-wrap gap-1 mt-1">
           {exercise.targetMuscles.slice(0, 2).map(m => (
-            <span key={m} className="text-[10px] px-1.5 py-0.5 bg-slate-50 text-slate-500 rounded border border-slate-100 truncate">
+            <span key={m} className={`text-[10px] px-1.5 py-0.5 rounded border truncate ${
+              exercise.flagged ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-slate-50 text-slate-500 border-slate-100'
+            }`}>
               {m}
             </span>
           ))}
