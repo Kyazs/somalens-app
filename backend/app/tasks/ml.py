@@ -36,6 +36,7 @@ from app.utils.scale_normalization import normalize_silhouette_scale
 from app.services.ultra_v3_predictor import UltraV3Predictor
 from app.services.measurement_calibration import MeasurementCalibrator
 from app.services.bias_correction import SomatotypeBiasCorrector, OPERATING_THRESHOLD
+from app.services.confidence_assessment import ConfidenceAssessor
 
 # Path to model files
 MODELS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ml_models")
@@ -502,12 +503,33 @@ def process_measurement(measurement_id: int):
             gender=gender,
         )
         
+        # STEP 10: Confidence Assessment (diagnostic only — does not modify values)
+        try:
+            confidence_assessor = ConfidenceAssessor(tau=1.0)
+            calibrated_measurements = {}
+            calibrated_measurements.update(cal_skinfolds)
+            calibrated_measurements.update(cal_girths)
+            
+            confidence_report = confidence_assessor.assess(
+                measurements=calibrated_measurements,
+                height_cm=height_cm,
+                weight_kg=weight_kg,
+                classification_threshold=OPERATING_THRESHOLD
+            )
+            print(f"Confidence Assessment: {confidence_report['confidence']} "
+                  f"({confidence_report['n_flagged']}/8 flagged, "
+                  f"boundary_sensitive={confidence_report['boundary_sensitive']})")
+        except Exception as e:
+            logger.warning(f"[Measurement {measurement_id}] Confidence assessment failed: {e}")
+            confidence_report = None
+        
         # Update DB
         measurement.somatotype_endo = final_endo
         measurement.somatotype_meso = final_meso
         measurement.somatotype_ecto = final_ecto
         measurement.somatotype_class = somatotype_class
         measurement.body_fat_percentage = body_fat_result['body_fat_percentage']
+        measurement.confidence_data = confidence_report
         
         # Save all intermediate data
         if not measurement.circumferences:
