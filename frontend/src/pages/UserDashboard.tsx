@@ -54,7 +54,8 @@ export function UserDashboard() {
         hwr: circumferences.hwr ?? 0
       },
       front_image_url: session.front_image_url,
-      side_image_url: session.side_image_url
+      side_image_url: session.side_image_url,
+      confidence_data: session.confidence_data || null,
     };
 
     navigate('/results', { 
@@ -259,6 +260,21 @@ export function UserDashboard() {
                         </div>
                       ))}
                     </div>
+
+                    {history[0].confidence_data && (
+                      <div className={`mt-4 px-3 py-2 rounded-lg text-xs font-medium text-center ${
+                        history[0].confidence_data.confidence === 'HIGH'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : history[0].confidence_data.confidence === 'MEDIUM'
+                          ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                          : 'bg-rose-50 text-rose-700 border border-rose-200'
+                      }`}>
+                        {history[0].confidence_data.confidence} Confidence
+                        {history[0].confidence_data.n_flagged > 0 && (
+                          <span className="opacity-70"> · {history[0].confidence_data.n_flagged}/8 flagged</span>
+                        )}
+                      </div>
+                    )}
                   </>
                 ) : (
                   <div className="text-slate-400 text-sm">No data available</div>

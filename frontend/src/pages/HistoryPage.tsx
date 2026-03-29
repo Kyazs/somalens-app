@@ -58,6 +58,7 @@ export function HistoryPage() {
       },
       front_image_url: session.front_image_url,
       side_image_url: session.side_image_url,
+      confidence_data: session.confidence_data || null,
     };
 
     navigate('/results', { 
@@ -247,6 +248,7 @@ export function HistoryPage() {
                         <th className="px-6 py-4">Date</th>
                         <th className="px-6 py-4">Somatotype</th>
                         <th className="px-6 py-4">Endo - Meso - Ecto</th>
+                        <th className="px-6 py-4">Confidence</th>
                         <th className="px-6 py-4 text-right">Action</th>
                       </tr>
                     </thead>
@@ -273,6 +275,21 @@ export function HistoryPage() {
                             {session.somatotype_endo !== null ? (
                               `${session.somatotype_endo.toFixed(1)} - ${session.somatotype_meso?.toFixed(1)} - ${session.somatotype_ecto?.toFixed(1)}`
                             ) : '-'}
+                          </td>
+                          <td className="px-6 py-4">
+                            {session.confidence_data ? (
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${
+                                session.confidence_data.confidence === 'HIGH'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : session.confidence_data.confidence === 'MEDIUM'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}>
+                                {session.confidence_data.confidence}
+                              </span>
+                            ) : (
+                              <span className="text-slate-400 text-xs">—</span>
+                            )}
                           </td>
                           <td className="px-6 py-4 text-right space-x-2">
                             <button
@@ -354,6 +371,17 @@ export function HistoryPage() {
                         {selectedSession.somatotype_endo?.toFixed(1)} - {selectedSession.somatotype_meso?.toFixed(1)} - {selectedSession.somatotype_ecto?.toFixed(1)}
                       </span>
                     </div>
+                    {selectedSession.confidence_data && (
+                      <div className={`px-4 py-2 rounded-full border text-sm font-medium ${
+                        selectedSession.confidence_data.confidence === 'HIGH'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : selectedSession.confidence_data.confidence === 'MEDIUM'
+                          ? 'bg-amber-50 border-amber-200 text-amber-700'
+                          : 'bg-rose-50 border-rose-200 text-rose-700'
+                      }`}>
+                        Confidence: <span className="font-bold">{selectedSession.confidence_data.confidence}</span> ({selectedSession.confidence_data.n_flagged}/8 flagged)
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
