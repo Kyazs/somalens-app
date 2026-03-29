@@ -56,7 +56,44 @@ export interface MeasurementSession {
   body_fat_percentage: number | null;
   circumferences: Record<string, number> | null;
   medical_conditions?: string[] | null;
+  confidence_data?: ConfidenceData | null;
   created_at: string;
+}
+
+export interface ConfidenceData {
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  n_flagged: number;
+  flagged_measurements: string[];
+  boundary_sensitive: boolean;
+  uncertainty_band: { endo: number; meso: number; ecto: number };
+  per_measurement: ConfidenceMeasurement[];
+  conformal_intervals: Record<string, ConformalInterval>;
+  explanation: string;
+  near_border_classes: string[];
+  tau: number;
+  alpha: number;
+}
+
+export interface ConfidenceMeasurement {
+  measurement: string;
+  value: number;
+  mae: number;
+  conformal_q90: number;
+  ci_lower: number;
+  ci_upper: number;
+  impact_endo: number;
+  impact_meso: number;
+  impact_ecto: number;
+  max_impact: number;
+  flagged: boolean;
+}
+
+export interface ConformalInterval {
+  value: number;
+  lower: number;
+  upper: number;
+  half_width: number;
+  unit: string;
 }
 
 /**

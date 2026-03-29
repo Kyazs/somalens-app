@@ -1,6 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
-import type { MeasurementSession } from '../types/pose';
+import type { MeasurementSession, ConfidenceData } from '../types/pose';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -38,6 +38,7 @@ export interface AnalysisResponse {
   };
   front_image_url?: string | null;
   side_image_url?: string | null;
+  confidence_data?: ConfidenceData | null;
 }
 
 export interface MeasurementResponse {
@@ -55,6 +56,7 @@ export interface MeasurementResponse {
   somatotype_ecto: number | null;
   body_fat_percentage: number | null;
   circumferences: Record<string, number> | null;
+  confidence_data?: ConfidenceData | null;
   created_at: string;
 }
 
