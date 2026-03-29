@@ -23,6 +23,7 @@ class MeasurementBase(SQLModel):
     body_fat_percentage: Optional[float] = None
     circumferences: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
     medical_conditions: Optional[List[str]] = Field(default=None, sa_column=Column(JSON))
+    confidence_data: Optional[Dict[str, Any]] = Field(default=None, sa_column=Column(JSON))
 
 
 class Measurement(MeasurementBase, table=True):
