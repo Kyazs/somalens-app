@@ -53,6 +53,7 @@ export function ResultsPage() {
   const [selectedFood, setSelectedFood] = useState<FoodItem | null>(null);
   const [selectedExercise, setSelectedExercise] = useState<ExerciseInfo | null>(null);
   const [expandedStrategy, setExpandedStrategy] = useState<number | null>(0);
+  const [confidenceOpen, setConfidenceOpen] = useState(false);
   const [expandedMeasurements, setExpandedMeasurements] = useState<{
     skinfolds: boolean;
     breadths: boolean;
@@ -207,7 +208,7 @@ export function ResultsPage() {
 
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
             {/* Export Button - Top Right */}
-             <div className="flex justify-end gap-3">
+             <div className="flex flex-wrap justify-end gap-3">
                 <Link 
                     to="/capture" 
                     onClick={reset}
@@ -408,6 +409,151 @@ export function ResultsPage() {
             </div>
           </div>
 
+          {/* ROW 3: Measurement Confidence */}
+          {result.confidence_data && (
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-100">
+              {/* Clickable Header — always visible */}
+              <button
+                onClick={() => setConfidenceOpen(!confidenceOpen)}
+                className="w-full flex flex-wrap items-center justify-between gap-3 p-6 text-left hover:bg-slate-50/50 transition-colors rounded-2xl"
+              >
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-slate-900">Measurement Confidence</h3>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${
+                    result.confidence_data.confidence === 'HIGH'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : result.confidence_data.confidence === 'MEDIUM'
+                      ? 'bg-amber-50 text-amber-700 border-amber-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}>
+                    {result.confidence_data.confidence}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    {result.confidence_data.n_flagged}/8 flagged
+                  </span>
+                </div>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                  className={`text-slate-400 transition-transform duration-200 ${confidenceOpen ? 'rotate-180' : ''}`}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+
+              {/* Collapsible Content */}
+              {confidenceOpen && (
+                <div className="px-6 pb-6 border-t border-slate-100">
+                  {/* Boundary sensitivity warning */}
+                  {result.confidence_data.boundary_sensitive && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mt-4 mb-4 flex items-start gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-600 flex-shrink-0 mt-0.5">
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/>
+                        <line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>
+                      <p className="text-xs text-amber-700">
+                        <strong>Boundary Sensitive:</strong> The uncertainty band crosses a classification boundary — the somatotype category may differ within the measurement error range.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Near-border classification notice */}
+                  {result.confidence_data.near_border_classes && result.confidence_data.near_border_classes.length > 0 && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mt-4 mb-4 flex items-start gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-600 flex-shrink-0 mt-0.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                      </svg>
+                      <div className="text-xs text-blue-700">
+                        <strong>Near-Border Classification:</strong> Your somatotype is close to the boundary (within ±1.0) of the following classification{result.confidence_data.near_border_classes.length > 1 ? 's' : ''}:
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {result.confidence_data.near_border_classes.map((cls) => (
+                            <span key={cls} className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                              {cls}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-2 text-blue-600 opacity-80">Small changes in measurement results may lead to a different somatotype classification.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Uncertainty Band */}
+                  <div className="grid grid-cols-3 gap-3 mt-4 mb-6">
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Endomorphy</p>
+                      <p className="text-lg font-bold text-slate-900">±{result.confidence_data.uncertainty_band.endo.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Mesomorphy</p>
+                      <p className="text-lg font-bold text-slate-900">±{result.confidence_data.uncertainty_band.meso.toFixed(2)}</p>
+                    </div>
+                    <div className="bg-slate-50 rounded-xl p-3 text-center">
+                      <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Ectomorphy</p>
+                      <p className="text-lg font-bold text-slate-900">±{result.confidence_data.uncertainty_band.ecto.toFixed(2)}</p>
+                    </div>
+                  </div>
+
+                  {/* Per-measurement confidence table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-slate-200 text-left text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          <th className="pb-3 pr-4">Measurement</th>
+                          <th className="pb-3 px-4 text-right">Predicted</th>
+                          <th className="pb-3 px-4 text-right hidden sm:table-cell">90% CI Range</th>
+                          <th className="pb-3 px-4 text-right hidden md:table-cell">Impact</th>
+                          <th className="pb-3 pl-4 text-center">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {result.confidence_data.per_measurement.map((m) => {
+                          const ci = result.confidence_data!.conformal_intervals[m.measurement];
+                          return (
+                            <tr key={m.measurement} className={m.flagged ? 'bg-amber-50/30' : ''}>
+                              <td className="py-3 pr-4 font-medium text-slate-700">
+                                {m.measurement.replace(/_/g, ' ')}
+                              </td>
+                              <td className="py-3 px-4 text-right font-mono text-slate-900">
+                                {m.value.toFixed(1)} {ci.unit}
+                              </td>
+                              <td className="py-3 px-4 text-right font-mono text-slate-500 hidden sm:table-cell">
+                                {ci.lower.toFixed(1)} – {ci.upper.toFixed(1)} {ci.unit}
+                              </td>
+                              <td className="py-3 px-4 text-right font-mono text-slate-500 hidden md:table-cell">
+                                {m.max_impact.toFixed(3)}
+                              </td>
+                              <td className="py-3 pl-4 text-center">
+                                {m.flagged ? (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-100 text-amber-700">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                                    Flagged
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-emerald-100 text-emerald-700">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                    OK
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Explanation */}
+                  <div className="mt-4 bg-slate-50 rounded-xl p-3">
+                    <p className="text-xs text-slate-500 leading-relaxed">{result.confidence_data.explanation}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Loading / Error States */}
           {recLoading && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-12 text-center">
@@ -493,7 +639,7 @@ export function ResultsPage() {
                       <div className="space-y-2">
                         {recommendation.medical_notes.map((note, i) => (
                           <div key={i} className="bg-white/60 border border-amber-100 rounded-lg p-3">
-                            <p className="text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: note.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                            <p className="text-sm text-slate-700 break-words" style={{ overflowWrap: 'anywhere' }} dangerouslySetInnerHTML={{ __html: note.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline;word-break:break-all">$1</a>') }} />
                           </div>
                         ))}
                       </div>
@@ -507,7 +653,7 @@ export function ResultsPage() {
                       <div className="space-y-2">
                         {recommendation.exercise_warnings.map((warning, i) => (
                           <div key={i} className="bg-white/60 border border-amber-100 rounded-lg p-3">
-                            <p className="text-sm text-slate-700" dangerouslySetInnerHTML={{ __html: warning.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                            <p className="text-sm text-slate-700 break-words" style={{ overflowWrap: 'anywhere' }} dangerouslySetInnerHTML={{ __html: warning.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline;word-break:break-all">$1</a>') }} />
                           </div>
                         ))}
                       </div>
@@ -754,7 +900,7 @@ export function ResultsPage() {
                   <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4">
                     <p className="text-xs font-bold text-amber-800 uppercase tracking-wider mb-2">Health Warnings</p>
                     {selectedExercise.warnings.map((w, i) => (
-                      <p key={i} className="text-xs text-amber-700 mb-1" dangerouslySetInnerHTML={{ __html: w.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline">$1</a>') }} />
+                      <p key={i} className="text-xs text-amber-700 mb-1 break-words" style={{ overflowWrap: 'anywhere' }} dangerouslySetInnerHTML={{ __html: w.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>').replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer" style="color:#b45309;text-decoration:underline;word-break:break-all">$1</a>') }} />
                     ))}
                   </div>
                 )}

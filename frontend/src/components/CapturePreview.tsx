@@ -65,7 +65,8 @@ export const CapturePreview: React.FC = () => {
         ectomorphy: measurement.somatotype_ecto || 0,
         classification: measurement.somatotype_class || '',
         hwr: circ.hwr || 0,
-      }
+      },
+      confidence_data: measurement.confidence_data || null,
     };
   };
 
